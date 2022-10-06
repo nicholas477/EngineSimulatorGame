@@ -2,35 +2,29 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "UObject/NoExportTypes.h"
-#include "EngineSimulator.generated.h"
+#include "Templates/UniquePtr.h"
 
 class Simulator;
 class Engine;
 class Vehicle;
 class Transmission;
 
-/**
- * 
- */
-UCLASS()
-class ENGINESIMULATORPLUGIN_API UEngineSimulator : public UObject
+class ENGINESIMULATORPLUGIN_API IEngineSimulatorInterface
 {
-	GENERATED_BODY()
-
 public:
-	UEngineSimulator();
-	~UEngineSimulator();
-
-protected:
-	void loadScript();
-	void loadEngine(Engine* engine, Vehicle* vehicle, Transmission* transmission);
-	void process(float frame_dt);
-
-protected:
-	Simulator* m_simulator;
-	Vehicle* m_vehicle;
-	Transmission* m_transmission;
-	Engine* m_iceEngine;
+	virtual void Simulate(float DeltaTime) = 0;
+	virtual void SetDynoEnabled(bool bEnabled) = 0;
+	virtual void SetStarterEnabled(bool bEnabled) = 0;
+	virtual void SetIgnitionEnabled(bool bEnabled) = 0;
+	virtual void SetSpeedControl(float Speed) = 0;
+	virtual void SetGear(int32 Gear) = 0;
+	virtual int32 GetGear() = 0;
+	virtual float GetSpeed() = 0;
+	virtual float GetRPM() = 0;
+	virtual float GetRedLine() = 0;
+	virtual float GetFilteredDynoTorque() = 0;
+	virtual float GetGearRatio() = 0;
+	virtual ~IEngineSimulatorInterface() {};
 };
+
+TUniquePtr<IEngineSimulatorInterface> CreateEngine(class USoundWave* EngineSound, class USoundWaveProcedural* SoundWaveOutput);

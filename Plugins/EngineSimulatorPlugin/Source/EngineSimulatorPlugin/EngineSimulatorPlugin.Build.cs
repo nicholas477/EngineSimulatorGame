@@ -14,16 +14,18 @@ public class EngineSimulatorPlugin : ModuleRules
 				"Core",
                 "CoreUObject",
 				"Engine",
-                "Projects"
+                "Projects",
+				"ChaosVehicles"
 			}
 		);
-			
-		
-		PrivateDependencyModuleNames.AddRange(
+
+        PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"EngineSim"
-			}
+				"EngineSim",
+                "ChaosVehiclesCore",
+                "ChaosVehiclesEngine"
+            }
 		);
 	}
 }

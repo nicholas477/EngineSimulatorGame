@@ -43,9 +43,9 @@ public class EngineSim : ModuleRules
         String EngineSimScriptInterpreterLibPath = Path.Combine(buildPath, buildType, "engine-sim-script-interpreter.lib");
         String ConstraintResolverLibPath = Path.Combine(buildPath, "dependencies/submodules/simple-2d-constraint-solver", buildType, "simple-2d-constraint-solver.lib");
         String PiranhaLibPath = Path.Combine(buildPath, "dependencies/submodules/piranha", buildType, "piranha.lib");
-        if (!File.Exists(EngineSimLibPath) 
+        if (!File.Exists(EngineSimLibPath)
             || !File.Exists(EngineSimScriptInterpreterLibPath)
-            || !File.Exists(ConstraintResolverLibPath) 
+            || !File.Exists(ConstraintResolverLibPath)
             || !File.Exists(PiranhaLibPath))
         {
             var configureCommand = CreateCMakeBuildCommand(Target, buildPath, buildType);
