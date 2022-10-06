@@ -17,13 +17,16 @@ public:
 	virtual void SetStarterEnabled(bool bEnabled) = 0;
 	virtual void SetIgnitionEnabled(bool bEnabled) = 0;
 	virtual void SetSpeedControl(float Speed) = 0;
+	virtual void SetDynoSpeed(float RPM) = 0;
 	virtual void SetGear(int32 Gear) = 0;
+	//virtual void SetClutch(float Clutch) = 0;
 	virtual int32 GetGear() = 0;
 	virtual float GetSpeed() = 0;
 	virtual float GetRPM() = 0;
 	virtual float GetRedLine() = 0;
 	virtual float GetFilteredDynoTorque() = 0;
 	virtual float GetGearRatio() = 0;
+	virtual bool IsDynoEnabled() = 0;
 	virtual ~IEngineSimulatorInterface() {};
 };
 

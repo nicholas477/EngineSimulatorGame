@@ -7,35 +7,8 @@
 #include "ChaosWheeledVehicleMovementComponent.h"
 #include "EngineSimulatorWheeledVehicleMovementComponent.generated.h"
 
-class IEngineSimulatorInterface;
-
-class UEngineSimulatorWheeledVehicleSimulation : public UChaosWheeledVehicleSimulation
-{
-public:
-	UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, class USoundWave* EngineSound, class USoundWaveProcedural* OutputEngineSound);
-
-	/** Update the engine/transmission simulation */
-	virtual void ProcessMechanicalSimulation(float DeltaTime) override;
-
-	/** Pass control Input to the vehicle systems */
-	virtual void ApplyInput(const FControlInputs& ControlInputs, float DeltaTime) override;
-
-	void AsyncUpdateSimulation(TFunction<void(IEngineSimulatorInterface*)> InCallable);
-
-	void PrintDebugInfo();
-
-protected:
-	TUniquePtr<IEngineSimulatorInterface> EngineSimulator;
-	TQueue<TFunction<void(IEngineSimulatorInterface*)>, EQueueMode::Mpsc> UpdateQueue;
-
-	// Debug info stuff
-	float Torque;
-	float RPM;
-	float Speed;
-	bool bStarterEnabled;
-	bool bDynoEnabled;
-	bool bIgnitionEnabled;
-};
+class USoundWave;
+class USoundWaveProcedural;
 
 UCLASS()
 class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent : public UChaosWheeledVehicleMovementComponent
@@ -52,10 +25,19 @@ class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
 	void SetEngineSimChangeGearDown(bool bNewGearDown);
 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
+	void SetEngineSimEnableDyno(bool bEnableDyno);
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
+		bool bClutchIn = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
+		int32 CurrentGear = -1;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Engine Simulator Vehicle Movement")
 		USoundWave* EngineSound;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engine Simulator Vehicle Movement")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Engine Simulator Vehicle Movement")
 		USoundWaveProcedural* OutputEngineSound;
 
 public:

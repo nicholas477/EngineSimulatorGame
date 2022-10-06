@@ -5,13 +5,12 @@
 #include "Sound/SoundWave.h"
 #include "Sound/SoundWaveProcedural.h"
 
-#ifdef PI
-#undef PI
-#endif
+__pragma(push_macro("PI"))
+__pragma(push_macro("TWO_PI"))
 
-#ifdef TWO_PI
+#undef PI
+
 #undef TWO_PI
-#endif
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/AllowWindowsPlatformAtomics.h"
@@ -34,6 +33,9 @@
 #include "Windows/HideWindowsPlatformAtomics.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
+__pragma(pop_macro("PI"))
+__pragma(pop_macro("TWO_PI"))
+
 typedef unsigned int SampleOffset;
 
 /**
@@ -50,6 +52,7 @@ public:
     virtual void SetDynoEnabled(bool bEnabled) { m_simulator.m_dyno.m_enabled = bEnabled; }
     virtual void SetStarterEnabled(bool bEnabled) { m_simulator.m_starterMotor.m_enabled = bEnabled; }
     virtual void SetIgnitionEnabled(bool bEnabled) { m_simulator.getEngine()->getIgnitionModule()->m_enabled = bEnabled; }
+    virtual void SetDynoSpeed(float RPM) { m_dynoSpeed = units::rpm(RPM); };
     virtual void SetSpeedControl(float SpeedControl) { m_iceEngine->setSpeedControl(SpeedControl); }
     virtual void SetGear(int32 Gear) { m_simulator.getTransmission()->changeGear(Gear); };
     virtual int32 GetGear() { return m_simulator.getTransmission()->getGear(); };
@@ -68,6 +71,10 @@ public:
         {
             return 0.f;
         }
+    }
+    virtual bool IsDynoEnabled()
+    {
+        return m_simulator.m_dyno.m_enabled;
     }
     // End IEngineSimulatorInterface
 
@@ -279,48 +286,33 @@ void FEngineSimulator::process(float frame_dt)
 {
     frame_dt = static_cast<float>(clamp(frame_dt, 1 / 200.0f, 1 / 30.0f));
 
-    double speed = 1.0 / 1.0;
-    //if (m_engine.IsKeyDown(ysKey::Code::N1)) {
-    //    speed = 1 / 10.0;
-    //}
-    //else if (m_engine.IsKeyDown(ysKey::Code::N2)) {
-    //    speed = 1 / 100.0;
-    //}
-    //else if (m_engine.IsKeyDown(ysKey::Code::N3)) {
-    //    speed = 1 / 200.0;
-    //}
-    //else if (m_engine.IsKeyDown(ysKey::Code::N4)) {
-    //    speed = 1 / 500.0;
-    //}
-    //else if (m_engine.IsKeyDown(ysKey::Code::N5)) {
-    //    speed = 1 / 1000.0;
-    //}
-
     UE_LOG(LogTemp, Warning, TEXT("Engine throttle: %f"), m_simulator.getEngine()->getSpeedControl());
     UE_LOG(LogTemp, Warning, TEXT("Starter Enabled: %s"), m_simulator.m_starterMotor.m_enabled ? TEXT("TRUE") : TEXT("FALSE"));
     UE_LOG(LogTemp, Warning, TEXT("Dyno Enabled: %s"), m_simulator.m_dyno.m_enabled ? TEXT("TRUE") : TEXT("FALSE"));
     UE_LOG(LogTemp, Warning, TEXT("Ignition Enabled: %s"), m_simulator.getEngine()->getIgnitionModule()->m_enabled ? TEXT("TRUE") : TEXT("FALSE"));
 
-    m_simulator.setSimulationSpeed(speed);
+    m_simulator.setSimulationSpeed(1.0f);
 
-    if (m_simulator.m_dyno.m_enabled) {
-        if (!m_simulator.m_dyno.m_hold) {
-            if (m_simulator.getFilteredDynoTorque() > units::torque(1.0, units::ft_lb)) {
-                m_dynoSpeed += units::rpm(500) * frame_dt;
-            }
-            else {
-                m_dynoSpeed *= (1 / (1 + frame_dt));
-            }
+    m_simulator.m_dyno.m_enabled = m_simulator.getTransmission()->getGear() != -1;
 
-            //if ((m_dynoSpeed + units::rpm(1000)) > m_iceEngine->getRedline()) {
-            //    m_simulator.m_dyno.m_enabled = false;
-            //    m_dynoSpeed = units::rpm(0);
-            //}
-        }
-    }
+    //if (m_simulator.m_dyno.m_enabled) {
+    //    if (!m_simulator.m_dyno.m_hold) {
+    //        if (m_simulator.getFilteredDynoTorque() > units::torque(1.0, units::ft_lb)) {
+    //            m_dynoSpeed += units::rpm(500) * frame_dt;
+    //        }
+    //        else {
+    //            m_dynoSpeed *= (1 / (1 + frame_dt));
+    //        }
+    //    }
+    //}
 
-    m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
+    //if ((m_dynoSpeed + units::rpm(1000)) > m_iceEngine->getRedline()) {
+    //    m_simulator.m_dyno.m_enabled = false;
+    //    m_dynoSpeed = units::rpm(0);
+    //}
 
+    //m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
+    m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed;
     m_simulator.startFrame(frame_dt);
 
     auto proc_t0 = std::chrono::steady_clock::now();

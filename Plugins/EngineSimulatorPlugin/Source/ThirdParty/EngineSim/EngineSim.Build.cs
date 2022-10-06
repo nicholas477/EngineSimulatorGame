@@ -18,6 +18,16 @@ public class EngineSim : ModuleRules
         get { return "C:/local/boost_1_70_0"; }
     }
 
+    private string SDL2Path
+    {
+        get { return "C:/local/SDL2"; }
+    }
+
+    private string SDL2ImagePath
+    {
+        get { return "C:/local/SDL2_image"; }
+    }
+
     private string ModulePath
 	{
 		get { return ModuleDirectory; }
@@ -35,18 +45,21 @@ public class EngineSim : ModuleRules
 	{
         Type = ModuleType.External;
 
+
         const string buildType = "Release";
         var buildDirectory = "engine-sim/build/" + buildType;
         var buildPath = Path.Combine(ModulePath, buildDirectory);
 
+
         String EngineSimLibPath = Path.Combine(buildPath, buildType, "engine-sim.lib");
         String EngineSimScriptInterpreterLibPath = Path.Combine(buildPath, buildType, "engine-sim-script-interpreter.lib");
+        String EngineSimAppLibPath = Path.Combine(buildPath, buildType, "engine-sim-app-lib.lib");
         String ConstraintResolverLibPath = Path.Combine(buildPath, "dependencies/submodules/simple-2d-constraint-solver", buildType, "simple-2d-constraint-solver.lib");
         String PiranhaLibPath = Path.Combine(buildPath, "dependencies/submodules/piranha", buildType, "piranha.lib");
-        if (!File.Exists(EngineSimLibPath)
-            || !File.Exists(EngineSimScriptInterpreterLibPath)
-            || !File.Exists(ConstraintResolverLibPath)
-            || !File.Exists(PiranhaLibPath))
+        //if (!File.Exists(EngineSimLibPath)
+        //    || !File.Exists(EngineSimScriptInterpreterLibPath)
+        //    || !File.Exists(ConstraintResolverLibPath)
+        //    || !File.Exists(PiranhaLibPath))
         {
             var configureCommand = CreateCMakeBuildCommand(Target, buildPath, buildType);
             var configureCode = ExecuteCommandSync(configureCommand);
@@ -75,9 +88,11 @@ public class EngineSim : ModuleRules
         PublicIncludePaths.Add(Path.Combine(ModulePath, "engine-sim/dependencies/submodules"));
         PublicAdditionalLibraries.Add(EngineSimLibPath);
         PublicAdditionalLibraries.Add(EngineSimScriptInterpreterLibPath);
+        PublicAdditionalLibraries.Add(EngineSimAppLibPath);
         PublicAdditionalLibraries.Add(ConstraintResolverLibPath);
         PublicAdditionalLibraries.Add(PiranhaLibPath);
         LinkBoost(Target);
+        LinkSDL2(Target);
     }
 	
 	private string GetGeneratorName(WindowsCompiler compiler)
@@ -123,8 +138,10 @@ public class EngineSim : ModuleRules
                         AddFlexDeps() +
                         AddBisonDeps() +
                         AddBoost(target) +
+                        AddSDL(target) +
                         " -DDISCORD_ENABLED=OFF" +
                         " -DPIRANHA_ENABLED=ON" +
+                        " -DBUILD_APP_AS_LIB=ON" +
                         " -DBUILD_APP=OFF" +
                         " -DCMAKE_BUILD_TYPE=" + buildType +
 						" -DCMAKE_INSTALL_PREFIX=\"" + installPath + "\"";
@@ -169,6 +186,30 @@ public class EngineSim : ModuleRules
         return outString;
     }
 
+    private string AddSDL(ReadOnlyTargetRules target)
+    {
+        String outString = "";
+
+        string SDL2IncludePath = Path.Combine(SDL2Path, "include");
+        outString += " -DSDL2_INCLUDE_DIR=\"" + SDL2IncludePath + "\"";
+
+        string SDL2ImageIncludePath = Path.Combine(SDL2ImagePath, "include");
+        outString += " -DSDL2_IMAGE_INCLUDE_DIR=\"" + SDL2ImageIncludePath + "\"";
+
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            string SDL2LibPath = Path.Combine(SDL2Path, "lib/x64/SDL2.lib");
+            string SDL2MainLibPath = Path.Combine(SDL2Path, "lib/x64/SDL2main.lib");
+            outString += " -DSDL2_LIBRARY=\"" + SDL2LibPath + "\"";
+            outString += " -DSDL2MAIN_LIBRARY=\"" + SDL2MainLibPath + "\"";
+
+            string SDL2ImageLibPath = Path.Combine(SDL2ImagePath, "lib/x64/SDL2_image.lib");
+            outString += " -DSDL2_IMAGE_LIBRARY=\"" + SDL2ImageLibPath + "\"";
+        }
+
+        return outString;
+    }
+
     private void LinkBoost(ReadOnlyTargetRules target)
     {
         string[] BoostLibraries = { "filesystem" };
@@ -190,6 +231,23 @@ public class EngineSim : ModuleRules
                 PublicAdditionalLibraries.Add(Path.Combine(BoostLibPath, BoostLibName + ".lib"));
             }
         }
+    }
+
+    private void LinkSDL2(ReadOnlyTargetRules target)
+    {
+        string SDL2LibPath = Path.Combine(SDL2Path, "lib/x64/SDL2.lib");
+        string SDL2DLLPath = Path.Combine(SDL2Path, "lib/x64/SDL2.dll");
+        string SDL2MainLibPath = Path.Combine(SDL2Path, "lib/x64/SDL2main.lib");
+        PublicAdditionalLibraries.Add(SDL2LibPath);
+        PublicAdditionalLibraries.Add(SDL2MainLibPath);
+
+        //PublicDelayLoadDLLs.Add(SDL2DLLPath);
+        RuntimeDependencies.Add(SDL2DLLPath);
+
+        string SDL2ImageLibPath = Path.Combine(SDL2ImagePath, "lib/x64/SDL2_image.lib");
+        string SDL2ImageDLLPath = Path.Combine(SDL2ImagePath, "lib/x64/SDL2_image.dll");
+        PublicAdditionalLibraries.Add(SDL2ImageLibPath);
+        RuntimeDependencies.Add(SDL2ImagePath);
     }
 
     private string CreateCMakeInstallCommand(string buildDirectory, string buildType)
