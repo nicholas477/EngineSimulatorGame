@@ -63,15 +63,21 @@ public:
     virtual float GetDynoPower() { return units::convert(m_simulator.getDynoPower(), units::hp); }
     virtual float GetGearRatio()
     {
-        const int32 current_gear = m_simulator.getTransmission()->getGear();
-        if (current_gear >= 0 && current_gear < m_simulator.getTransmission()->getGearCount())
+        if (m_simulator.getTransmission())
         {
-            return m_simulator.getTransmission()->getGearRatios()[current_gear];
+            const int32 current_gear = m_simulator.getTransmission()->getGear();
+            if (current_gear >= 0 && current_gear < m_simulator.getTransmission()->getGearCount())
+            {
+                return m_simulator.getTransmission()->getGearRatios()[current_gear];
+            }
+            else
+            {
+                return 0.f;
+            }
         }
-        else
-        {
-            return 0.f;
-        }
+
+
+        return 0.f;
     }
     virtual bool IsDynoEnabled()
     {
