@@ -6,6 +6,7 @@
 #include "UObject/NoExportTypes.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
 #include "HAL/Runnable.h"
+#include "EngineSimulatorWheeledVehicleSimulation.generated.h"
 
 class IEngineSimulatorInterface;
 
@@ -13,11 +14,30 @@ struct FEngineSimulatorInput
 {
 	float DeltaTime = 1.0f / 60.f;
 	float EngineRPM = 0;
+	uint64 FrameCounter = 0;
 };
 
+USTRUCT(BlueprintType)
 struct FEngineSimulatorOutput
 {
-	float Torque = 0; // Newtons per meter
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		float Torque = 0; // Newtons per meter
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		float RPM = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		float Redline = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		float Horsepower = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		FString Name;
+
+	uint64 FrameCounter = 0;
 };
 
 class FEngineSimulatorThread : public FRunnable
@@ -53,11 +73,14 @@ protected:
 	IEngineSimulatorInterface* EngineSimulator;
 
 	TQueue<TFunction<void(IEngineSimulatorInterface*)>, EQueueMode::Mpsc> UpdateQueue;
-	TFunction<void()> DebugPrint;
+	TFunction<void(UWorld* World)> DebugPrint;
 
 	FRunnableThread* Thread;
 
 	friend class UEngineSimulatorWheeledVehicleSimulation;
+
+	// Other stuff
+	FDebugFloatHistory FloatHistory;
 };
 
 class UEngineSimulatorWheeledVehicleSimulation : public UChaosWheeledVehicleSimulation
@@ -73,11 +96,16 @@ public:
 
 	void AsyncUpdateSimulation(TFunction<void(IEngineSimulatorInterface*)> InCallable);
 
-	void PrintDebugInfo();
+	void PrintDebugInfo(UWorld* World);
+
+	FEngineSimulatorOutput GetLastOutput();
 
 protected:
 	TUniquePtr<IEngineSimulatorInterface> EngineSimulator;
 	TUniquePtr<FEngineSimulatorThread> EngineSimulatorThread;
+
+	FEngineSimulatorOutput LastOutput;
+	mutable FCriticalSection LastOutputMutex;
 
 	bool bStarterEnabled;
 	bool bDynoEnabled;

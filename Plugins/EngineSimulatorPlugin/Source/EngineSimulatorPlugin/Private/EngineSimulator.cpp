@@ -58,8 +58,9 @@ public:
     virtual int32 GetGear() { return m_simulator.getTransmission()->getGear(); };
     virtual float GetSpeed() { return m_simulator.getEngine()->getSpeed(); };
     virtual float GetRPM() { return m_simulator.getEngine()->getRpm(); };
-    virtual float GetRedLine() { return m_simulator.getEngine()->getRedline(); };
+    virtual float GetRedLine() { return units::toRpm(m_simulator.getEngine()->getRedline()); };
     virtual float GetFilteredDynoTorque() { return m_simulator.getFilteredDynoTorque(); };
+    virtual float GetDynoPower() { return units::convert(m_simulator.getDynoPower(), units::hp); }
     virtual float GetGearRatio()
     {
         const int32 current_gear = m_simulator.getTransmission()->getGear();
@@ -75,6 +76,10 @@ public:
     virtual bool IsDynoEnabled()
     {
         return m_simulator.m_dyno.m_enabled;
+    }
+    virtual FString GetName()
+    {
+        return FString(UTF8_TO_TCHAR(m_simulator.getEngine()->getName().c_str()));
     }
     // End IEngineSimulatorInterface
 

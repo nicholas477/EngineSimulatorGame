@@ -53,9 +53,8 @@ uint32 FEngineSimulatorThread::Run()
 		{
 			FEngineSimulatorInput ThisInput;
 			{
-				InputMutex.Lock();
+				FScopeLock Lock(&InputMutex);
 				ThisInput = Input;
-				InputMutex.Unlock();
 			}
 
 			{
@@ -72,18 +71,36 @@ uint32 FEngineSimulatorThread::Run()
 				EngineSimulator->Simulate(ThisInput.DeltaTime);
 
 				float TransmissionTorque = EngineSimulator->GetFilteredDynoTorque() * EngineSimulator->GetGearRatio();
-				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed]()
+
+				FloatHistory.AddSample(TransmissionTorque);
+				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed, FloatHistory = FloatHistory](UWorld* World)
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Tranmission torque: %f"), T));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation RPM: %f"), RPM));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Speed: %f"), Speed));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Dyno Speed (RPM): %f"), DynoSpeed));
+
+					//FDebugFloatHistory FloatHistory;
+					//FloatHistory.AddSample()
+//#if ENABLE_DRAW_DEBUG
+//					//const FDebugFloatHistory& FloatHistory, const FTransform& DrawTransform, FVector2D DrawSize, FLinearColor DrawColor, float LifeTime
+//					if (World->GetFirstPlayerController<APlayerController>())
+//					{
+//						FVector DrawLocation = World->GetFirstPlayerController<APlayerController>()->PlayerCameraManager->GetCameraLocation();
+//						DrawLocation += World->GetFirstPlayerController<APlayerController>()->PlayerCameraManager->GetCameraRotation().Vector() * 600.f;
+//						::DrawDebugFloatHistory(*World, FloatHistory, DrawLocation, FVector2D(500.f, 500.f), FColor::Blue, false, 0.f);
+//					}
+//#endif
 				};
 
 				{
-					OutputMutex.Lock();
+					FScopeLock Lock(&OutputMutex);
 					Output.Torque = TransmissionTorque;
-					OutputMutex.Unlock();
+					Output.RPM = EngineSimulator->GetRPM();
+					Output.Redline = EngineSimulator->GetRedLine();
+					Output.Horsepower = EngineSimulator->GetDynoPower();
+					Output.Name = EngineSimulator->GetName();
+					Output.FrameCounter = ThisInput.FrameCounter + 1;
 				}
 			}
 		}
@@ -124,9 +141,18 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 		// Retrieve output from the last frame
 		FEngineSimulatorOutput SimulationOutput;
 		{
-			EngineSimulatorThread->OutputMutex.Lock();
+			FScopeLock Lock(&EngineSimulatorThread->OutputMutex);
 			SimulationOutput = EngineSimulatorThread->Output;
-			EngineSimulatorThread->OutputMutex.Unlock();
+		}
+
+		{
+			FScopeLock Lock(&LastOutputMutex);
+			LastOutput = SimulationOutput;
+		}
+
+		if (SimulationOutput.FrameCounter != GFrameCounter)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("Simulation behind by %lld frames!!!"), GFrameCounter - SimulationOutput.FrameCounter));
 		}
 
 		auto& PTransmission = PVehicle->GetTransmission();
@@ -147,6 +173,7 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 			EngineSimulatorThread->InputMutex.Lock();
 			EngineSimulatorThread->Input.DeltaTime = DeltaTime;
 			EngineSimulatorThread->Input.EngineRPM = DynoSpeed;
+			EngineSimulatorThread->Input.FrameCounter = GFrameCounter;
 			EngineSimulatorThread->InputMutex.Unlock();
 		}
 		EngineSimulatorThread->Trigger();
@@ -155,6 +182,7 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 		for (int WheelIdx = 0; WheelIdx < Wheels.Num(); WheelIdx++)
 		{
 			auto& PWheel = PVehicle->Wheels[WheelIdx];
+			//PWheel.bInContact = true; // fuck you epic
 			if (PWheel.Setup().EngineEnabled)
 			{
 				PWheel.SetDriveTorque(Chaos::TorqueMToCm(SimulationOutput.Torque * PTransmission.Setup().FinalDriveRatio) * PWheel.Setup().TorqueRatio);
@@ -190,10 +218,16 @@ void UEngineSimulatorWheeledVehicleSimulation::AsyncUpdateSimulation(TFunction<v
 	}
 }
 
-void UEngineSimulatorWheeledVehicleSimulation::PrintDebugInfo()
+void UEngineSimulatorWheeledVehicleSimulation::PrintDebugInfo(UWorld* InWorld)
 {
 	if (EngineSimulatorThread && EngineSimulatorThread->DebugPrint)
 	{
-		EngineSimulatorThread->DebugPrint();
+		EngineSimulatorThread->DebugPrint(InWorld);
 	}
+}
+
+FEngineSimulatorOutput UEngineSimulatorWheeledVehicleSimulation::GetLastOutput()
+{
+	FScopeLock Lock(&LastOutputMutex);
+	return LastOutput;
 }

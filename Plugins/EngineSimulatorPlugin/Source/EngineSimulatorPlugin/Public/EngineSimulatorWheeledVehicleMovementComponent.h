@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
+#include "EngineSimulatorWheeledVehicleSimulation.h"
 #include "EngineSimulatorWheeledVehicleMovementComponent.generated.h"
 
 class USoundWave;
@@ -39,6 +40,9 @@ class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Engine Simulator Vehicle Movement")
 		USoundWaveProcedural* OutputEngineSound;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Engine Simulator Vehicle Movement")
+		FEngineSimulatorOutput LastEngineSimulatorOutput;
 
 public:
 	virtual TUniquePtr<Chaos::FSimpleWheeledVehicle> CreatePhysicsVehicle() override;

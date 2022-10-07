@@ -26,7 +26,9 @@ void UEngineSimulatorWheeledVehicleMovementComponent::TickComponent(float DeltaT
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (VehicleSimulationPT.Get())
 	{
-		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->PrintDebugInfo();
+		UEngineSimulatorWheeledVehicleSimulation* VS = ((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get());
+		VS->PrintDebugInfo(GetWorld());
+		LastEngineSimulatorOutput = VS->GetLastOutput();
 	}
 }
 
