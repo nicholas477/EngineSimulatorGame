@@ -19,11 +19,15 @@ void FEngineSimulatorPluginModule::ShutdownModule()
 
 FString FEngineSimulatorPluginModule::GetAssetDirectory()
 {
+#if WITH_EDITOR
 	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("EngineSimulatorPlugin"));
 
 	check(Plugin.IsValid());
 
 	return FPaths::Combine(Plugin->GetBaseDir(), TEXT("Resources"), TEXT("assets"));
+#else
+	return FPaths::Combine(FPaths::ProjectDir(), TEXT("assets"));
+#endif
 }
 
 #undef LOCTEXT_NAMESPACE

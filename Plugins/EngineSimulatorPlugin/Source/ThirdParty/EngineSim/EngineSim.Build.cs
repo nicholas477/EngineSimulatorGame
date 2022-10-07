@@ -33,6 +33,11 @@ public class EngineSim : ModuleRules
 		get { return ModuleDirectory; }
 	}
 
+    private string EngineSimPath
+    {
+        get { return "C:/local/"; }
+    }
+
 	private string ThirdPartyPath
 	{
 		get
@@ -46,9 +51,9 @@ public class EngineSim : ModuleRules
         Type = ModuleType.External;
 
 
-        const string buildType = "Release";
+        const string buildType = "RelWithDebInfo";
         var buildDirectory = "engine-sim/build/" + buildType;
-        var buildPath = Path.Combine(ModulePath, buildDirectory);
+        var buildPath = Path.Combine(EngineSimPath, buildDirectory);
 
 
         String EngineSimLibPath = Path.Combine(buildPath, buildType, "engine-sim.lib");
@@ -56,10 +61,12 @@ public class EngineSim : ModuleRules
         String EngineSimAppLibPath = Path.Combine(buildPath, buildType, "engine-sim-app-lib.lib");
         String ConstraintResolverLibPath = Path.Combine(buildPath, "dependencies/submodules/simple-2d-constraint-solver", buildType, "simple-2d-constraint-solver.lib");
         String PiranhaLibPath = Path.Combine(buildPath, "dependencies/submodules/piranha", buildType, "piranha.lib");
+        String DeltaStudioLibPath = Path.Combine(buildPath, "dependencies/submodules/delta-studio", buildType, "delta-core.lib");
         //if (!File.Exists(EngineSimLibPath)
         //    || !File.Exists(EngineSimScriptInterpreterLibPath)
         //    || !File.Exists(ConstraintResolverLibPath)
         //    || !File.Exists(PiranhaLibPath))
+
         {
             var configureCommand = CreateCMakeBuildCommand(Target, buildPath, buildType);
             var configureCode = ExecuteCommandSync(configureCommand);
@@ -83,14 +90,15 @@ public class EngineSim : ModuleRules
 
         PublicDefinitions.Add("ATG_ENGINE_SIM_PIRANHA_ENABLED=1");
 
-        PublicIncludePaths.Add(Path.Combine(ModulePath, "engine-sim/include"));
-        PublicIncludePaths.Add(Path.Combine(ModulePath, "engine-sim/scripting/include"));
-        PublicIncludePaths.Add(Path.Combine(ModulePath, "engine-sim/dependencies/submodules"));
+        PublicIncludePaths.Add(Path.Combine(EngineSimPath, "engine-sim/include"));
+        PublicIncludePaths.Add(Path.Combine(EngineSimPath, "engine-sim/scripting/include"));
+        PublicIncludePaths.Add(Path.Combine(EngineSimPath, "engine-sim/dependencies/submodules"));
         PublicAdditionalLibraries.Add(EngineSimLibPath);
         PublicAdditionalLibraries.Add(EngineSimScriptInterpreterLibPath);
         PublicAdditionalLibraries.Add(EngineSimAppLibPath);
         PublicAdditionalLibraries.Add(ConstraintResolverLibPath);
         PublicAdditionalLibraries.Add(PiranhaLibPath);
+        PublicAdditionalLibraries.Add(DeltaStudioLibPath);
         LinkBoost(Target);
         LinkSDL2(Target);
     }
@@ -125,7 +133,7 @@ public class EngineSim : ModuleRules
 		const string program = "cmake.exe";
 		var rootDirectory = ModulePath;
 		var installPath = Path.Combine(rootDirectory, "../../../Intermediate/Build/Win64/", "engine-sim");
-		var sourceDir = Path.Combine(rootDirectory, "engine-sim");
+		var sourceDir = Path.Combine(EngineSimPath, "engine-sim");
 
 		string generator = GetGeneratorName(target.WindowsPlatform.Compiler);
 
@@ -242,12 +250,13 @@ public class EngineSim : ModuleRules
         PublicAdditionalLibraries.Add(SDL2MainLibPath);
 
         //PublicDelayLoadDLLs.Add(SDL2DLLPath);
-        RuntimeDependencies.Add(SDL2DLLPath);
+        //RuntimeDependencies.Add(SDL2DLLPath);
+
 
         string SDL2ImageLibPath = Path.Combine(SDL2ImagePath, "lib/x64/SDL2_image.lib");
         string SDL2ImageDLLPath = Path.Combine(SDL2ImagePath, "lib/x64/SDL2_image.dll");
         PublicAdditionalLibraries.Add(SDL2ImageLibPath);
-        RuntimeDependencies.Add(SDL2ImagePath);
+        //RuntimeDependencies.Add(SDL2ImageDLLPath);
     }
 
     private string CreateCMakeInstallCommand(string buildDirectory, string buildType)

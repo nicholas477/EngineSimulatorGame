@@ -25,7 +25,7 @@ __pragma(push_macro("TWO_PI"))
 #include "engine.h"
 #include "transmission.h"
 
-//#include "delta.h"
+#include "delta.h"
 
 #include "audio_buffer.h"
 
@@ -49,13 +49,14 @@ public:
 
     // IEngineSimulatorInterface
     virtual void Simulate(float DeltaTime) override { process(DeltaTime); }
-    virtual void SetDynoEnabled(bool bEnabled) { m_simulator.m_dyno.m_enabled = bEnabled; }
+    virtual void SetDynoEnabled(bool bEnabled) { m_dynoEnabled = bEnabled; }
     virtual void SetStarterEnabled(bool bEnabled) { m_simulator.m_starterMotor.m_enabled = bEnabled; }
     virtual void SetIgnitionEnabled(bool bEnabled) { m_simulator.getEngine()->getIgnitionModule()->m_enabled = bEnabled; }
     virtual void SetDynoSpeed(float RPM) { m_dynoSpeed = units::rpm(RPM); };
     virtual void SetSpeedControl(float SpeedControl) { m_iceEngine->setSpeedControl(SpeedControl); }
     virtual void SetGear(int32 Gear) { m_simulator.getTransmission()->changeGear(Gear); };
     virtual int32 GetGear() { return m_simulator.getTransmission()->getGear(); };
+    virtual int32 GetGearCount() { return m_simulator.getTransmission()->getGearCount(); }
     virtual float GetSpeed() { return m_simulator.getEngine()->getSpeed(); };
     virtual float GetRPM() { return m_simulator.getEngine()->getRpm(); };
     virtual float GetRedLine() { return units::toRpm(m_simulator.getEngine()->getRedline()); };
@@ -100,6 +101,7 @@ protected:
     Transmission* m_transmission;
     Engine* m_iceEngine;
 
+    bool m_dynoEnabled;
     float m_dynoSpeed;
     USoundWave* EngineSound;
     USoundWaveProcedural* SoundWaveOutput;
@@ -119,6 +121,7 @@ FEngineSimulator::FEngineSimulator(USoundWave* InEngineSound, USoundWaveProcedur
     m_transmission = nullptr;
     m_iceEngine = nullptr;
 
+    m_dynoEnabled = true;
     m_dynoSpeed = 0;
 
     EngineSound = InEngineSound;
@@ -162,10 +165,17 @@ void FEngineSimulator::loadScript()
 
 #ifdef ATG_ENGINE_SIM_PIRANHA_ENABLED
     es_script::Compiler compiler;
-    const FString esPath = FPaths::ConvertRelativePathToFull(FPaths::Combine(FEngineSimulatorPluginModule::GetAssetDirectory(), "es/"));
+    const FString esPath = FPaths::ConvertRelativePathToFull(FPaths::Combine(FEngineSimulatorPluginModule::GetAssetDirectory(), "../es/"));
     compiler.initialize();
     compiler.addSearchPath(TCHAR_TO_UTF8(*esPath));
     const FString EnginePath = FPaths::ConvertRelativePathToFull(FPaths::Combine(FEngineSimulatorPluginModule::GetAssetDirectory(), "main.mr"));
+
+    if (FPaths::FileExists(TEXT("error_log.log")))
+    {
+        IFileManager& FileManager = IFileManager::Get();
+        FileManager.Delete(TEXT("error_log.log"));
+    }
+
     const bool compiled = compiler.compile(TCHAR_TO_UTF8(*EnginePath));
     if (compiled) {
         const es_script::Compiler::Output output = compiler.execute();
@@ -261,33 +271,52 @@ void FEngineSimulator::loadEngine(Engine* engine, Vehicle* vehicle, Transmission
     audioParams.dF_F_mix = static_cast<float>(engine->getInitialHighFrequencyGain());
     m_simulator.getSynthesizer()->setAudioParameters(audioParams);
 
+    bool bLoadedEngineSound = false;
     for (int i = 0; i < engine->getExhaustSystemCount(); ++i) {
         ImpulseResponse* response = engine->getExhaustSystem(i)->getImpulseResponse();
 
-        //ysWindowsAudioWaveFile waveFile;
-        //waveFile.OpenFile(response->getFilename().c_str());
-        //waveFile.InitializeInternalBuffer(waveFile.GetSampleCount());
-        //waveFile.FillBuffer(0);
-        //waveFile.CloseFile();
+        ysWindowsAudioWaveFile waveFile;
+        waveFile.OpenFile(response->getFilename().c_str());
+        FString AudioFilePath = UTF8_TO_TCHAR(response->getFilename().c_str());
+        checkf(FPaths::FileExists(AudioFilePath), *AudioFilePath);
+        UE_LOG(LogTemp, Warning, TEXT("Loading audio file: %s"), *AudioFilePath)
+        waveFile.InitializeInternalBuffer(waveFile.GetSampleCount());
+        waveFile.FillBuffer(0);
+        waveFile.CloseFile();
 
-        if (EngineSound)
-        {
-            int32 NumSamples = EngineSound->RawData.GetBulkDataSize() / sizeof(int16);
-            //check(EngineSound->RawData.GetElementSize() == sizeof(int16_t));
-            m_simulator.getSynthesizer()->initializeImpulseResponse(
-                reinterpret_cast<const int16_t*>(EngineSound->RawData.LockReadOnly()),
-                NumSamples,
-                response->getVolume(),
-                i
-            );
+        m_simulator.getSynthesizer()->initializeImpulseResponse(
+            reinterpret_cast<const int16_t*>(waveFile.GetBuffer()),
+            waveFile.GetSampleCount(),
+            response->getVolume(),
+            i
+        );
 
-            EngineSound->RawData.Unlock();
-        }
+        waveFile.DestroyInternalBuffer();
+
+        bLoadedEngineSound = true;
+
+        //if (EngineSound)
+        //{
+        //    int32 NumSamples = EngineSound->RawData.GetBulkDataSize() / sizeof(int16);
+        //    if (NumSamples > 0)
+        //    {
+        //        //check(EngineSound->RawData.GetElementSize() == sizeof(int16_t));
+        //        m_simulator.getSynthesizer()->initializeImpulseResponse(
+        //            reinterpret_cast<const int16_t*>(EngineSound->RawData.LockReadOnly()),
+        //            NumSamples,
+        //            response->getVolume(),
+        //            i
+        //        );
+
+        //        bLoadedEngineSound = true;
+        //        EngineSound->RawData.Unlock();
+        //    }
+        //}
 
         //waveFile.DestroyInternalBuffer();
     }
 
-    if (EngineSound)
+    if (bLoadedEngineSound)
     {
         m_simulator.startAudioRenderingThread();
     }
@@ -297,14 +326,9 @@ void FEngineSimulator::process(float frame_dt)
 {
     frame_dt = static_cast<float>(clamp(frame_dt, 1 / 200.0f, 1 / 30.0f));
 
-    UE_LOG(LogTemp, Warning, TEXT("Engine throttle: %f"), m_simulator.getEngine()->getSpeedControl());
-    UE_LOG(LogTemp, Warning, TEXT("Starter Enabled: %s"), m_simulator.m_starterMotor.m_enabled ? TEXT("TRUE") : TEXT("FALSE"));
-    UE_LOG(LogTemp, Warning, TEXT("Dyno Enabled: %s"), m_simulator.m_dyno.m_enabled ? TEXT("TRUE") : TEXT("FALSE"));
-    UE_LOG(LogTemp, Warning, TEXT("Ignition Enabled: %s"), m_simulator.getEngine()->getIgnitionModule()->m_enabled ? TEXT("TRUE") : TEXT("FALSE"));
-
     m_simulator.setSimulationSpeed(1.0f);
 
-    m_simulator.m_dyno.m_enabled = m_simulator.getTransmission()->getGear() != -1;
+    m_simulator.m_dyno.m_enabled = (m_simulator.getTransmission()->getGear() != -1) && m_dynoEnabled;
 
     //if (m_simulator.m_dyno.m_enabled) {
     //    if (!m_simulator.m_dyno.m_hold) {
@@ -323,7 +347,8 @@ void FEngineSimulator::process(float frame_dt)
     //}
 
     //m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
-    m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed;
+    m_simulator.m_dyno.m_rotationSpeed = FMath::Abs(m_dynoSpeed);
+    m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > 0; // Only run ignition in forward
     m_simulator.startFrame(frame_dt);
 
     auto proc_t0 = std::chrono::steady_clock::now();

@@ -14,6 +14,7 @@ struct FEngineSimulatorInput
 {
 	float DeltaTime = 1.0f / 60.f;
 	float EngineRPM = 0;
+	bool InContactWithGround = true;
 	uint64 FrameCounter = 0;
 };
 
@@ -36,6 +37,9 @@ struct FEngineSimulatorOutput
 
 	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
 		FString Name;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		int32 NumGears = 1;
 
 	uint64 FrameCounter = 0;
 };
@@ -78,9 +82,6 @@ protected:
 	FRunnableThread* Thread;
 
 	friend class UEngineSimulatorWheeledVehicleSimulation;
-
-	// Other stuff
-	FDebugFloatHistory FloatHistory;
 };
 
 class UEngineSimulatorWheeledVehicleSimulation : public UChaosWheeledVehicleSimulation

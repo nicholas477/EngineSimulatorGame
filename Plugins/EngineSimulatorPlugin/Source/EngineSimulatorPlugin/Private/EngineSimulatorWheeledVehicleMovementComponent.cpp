@@ -36,9 +36,9 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimChangeGearUp(b
 {
 	if (VehicleSimulationPT && bNewGearUp)
 	{
-		if (CurrentGear != FMath::Clamp(CurrentGear + 1, -1, 6))
+		if (CurrentGear != FMath::Clamp(CurrentGear + 1, -1, LastEngineSimulatorOutput.NumGears - 1))
 		{
-			CurrentGear = FMath::Clamp(CurrentGear + 1, -1, 6);
+			CurrentGear = FMath::Clamp(CurrentGear + 1, -1, LastEngineSimulatorOutput.NumGears - 1);
 			((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
 			{
 				EngineInterface->SetGear(CurrentGear);
@@ -52,7 +52,7 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimChangeGearDown
 {
 	if (VehicleSimulationPT && bNewGearDown)
 	{
-		CurrentGear = FMath::Clamp(CurrentGear - 1, -1, 6);
+		CurrentGear = FMath::Clamp(CurrentGear - 1, -1, LastEngineSimulatorOutput.NumGears - 1);
 		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
 		{
 			EngineInterface->SetGear(CurrentGear);

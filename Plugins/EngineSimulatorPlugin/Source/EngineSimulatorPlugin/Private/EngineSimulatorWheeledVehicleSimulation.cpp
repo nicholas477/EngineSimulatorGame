@@ -61,6 +61,7 @@ uint32 FEngineSimulatorThread::Run()
 				SCOPE_CYCLE_COUNTER(STAT_EngineSimulatorPlugin_UpdateSimulation);
 				float DynoSpeed = ThisInput.EngineRPM * (EngineSimulator->GetGearRatio() == 0.f ? 1000000.f : EngineSimulator->GetGearRatio());
 				EngineSimulator->SetDynoSpeed(DynoSpeed);
+				EngineSimulator->SetDynoEnabled(ThisInput.InContactWithGround);
 
 				TFunction<void(IEngineSimulatorInterface*)> SimulationUpdate;
 				while (UpdateQueue.Dequeue(SimulationUpdate))
@@ -72,34 +73,22 @@ uint32 FEngineSimulatorThread::Run()
 
 				float TransmissionTorque = EngineSimulator->GetFilteredDynoTorque() * EngineSimulator->GetGearRatio();
 
-				FloatHistory.AddSample(TransmissionTorque);
-				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed, FloatHistory = FloatHistory](UWorld* World)
+				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed](UWorld* World)
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Tranmission torque: %f"), T));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation RPM: %f"), RPM));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Speed: %f"), Speed));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Dyno Speed (RPM): %f"), DynoSpeed));
-
-					//FDebugFloatHistory FloatHistory;
-					//FloatHistory.AddSample()
-//#if ENABLE_DRAW_DEBUG
-//					//const FDebugFloatHistory& FloatHistory, const FTransform& DrawTransform, FVector2D DrawSize, FLinearColor DrawColor, float LifeTime
-//					if (World->GetFirstPlayerController<APlayerController>())
-//					{
-//						FVector DrawLocation = World->GetFirstPlayerController<APlayerController>()->PlayerCameraManager->GetCameraLocation();
-//						DrawLocation += World->GetFirstPlayerController<APlayerController>()->PlayerCameraManager->GetCameraRotation().Vector() * 600.f;
-//						::DrawDebugFloatHistory(*World, FloatHistory, DrawLocation, FVector2D(500.f, 500.f), FColor::Blue, false, 0.f);
-//					}
-//#endif
 				};
 
 				{
 					FScopeLock Lock(&OutputMutex);
-					Output.Torque = TransmissionTorque;
+					Output.Torque = TransmissionTorque * FMath::Sign(ThisInput.EngineRPM);
 					Output.RPM = EngineSimulator->GetRPM();
 					Output.Redline = EngineSimulator->GetRedLine();
 					Output.Horsepower = EngineSimulator->GetDynoPower();
 					Output.Name = EngineSimulator->GetName();
+					Output.NumGears = EngineSimulator->GetGearCount();
 					Output.FrameCounter = ThisInput.FrameCounter + 1;
 				}
 			}
@@ -157,12 +146,18 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 
 		auto& PTransmission = PVehicle->GetTransmission();
 
+		bool bWheelsInContact = false;
 		float WheelRPM = 0;
 		for (int I = 0; I < PVehicle->Wheels.Num(); I++)
 		{
 			if (PVehicle->Wheels[I].EngineEnabled)
 			{
-				WheelRPM = FMath::Abs(PVehicle->Wheels[I].GetWheelRPM());
+				WheelRPM = PVehicle->Wheels[I].GetWheelRPM();
+				//UE_LOG(LogTemp, Warning, TEXT("Wheel[%d]: rpm: %f"), I, WheelRPM);
+				if (PVehicle->Wheels[I].bInContact)
+				{
+					bWheelsInContact = true;
+				}
 			}
 		}
 
@@ -172,7 +167,11 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 		{
 			EngineSimulatorThread->InputMutex.Lock();
 			EngineSimulatorThread->Input.DeltaTime = DeltaTime;
-			EngineSimulatorThread->Input.EngineRPM = DynoSpeed;
+			EngineSimulatorThread->Input.InContactWithGround = bWheelsInContact;
+			//if (bWheelRPMWasSet)
+			{
+				EngineSimulatorThread->Input.EngineRPM = DynoSpeed;
+			}
 			EngineSimulatorThread->Input.FrameCounter = GFrameCounter;
 			EngineSimulatorThread->InputMutex.Unlock();
 		}
