@@ -22,8 +22,6 @@ FEngineSimulatorThread::FEngineSimulatorThread(USoundWaveProcedural* InSoundWave
 
 FEngineSimulatorThread::~FEngineSimulatorThread()
 {
-	//Stop();
-
 	if (Thread)
 	{
 		Thread->Kill(true);
@@ -49,7 +47,7 @@ uint32 FEngineSimulatorThread::Run()
 		Semaphore->Wait();
 		if (bStopRequested)
 		{
-			return 0;
+			break;
 		}
 		else
 		{
@@ -101,6 +99,8 @@ uint32 FEngineSimulatorThread::Run()
 		}
 	}
 
+	EngineSimulator.Reset();
+
 	return 0;
 }
 
@@ -122,7 +122,7 @@ void FEngineSimulatorThread::Trigger()
 }
 
 UEngineSimulatorWheeledVehicleSimulation::UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, 
-	USoundWave* EngineSound, class USoundWaveProcedural* OutputEngineSound)
+	class USoundWaveProcedural* OutputEngineSound)
 	: UChaosWheeledVehicleSimulation(WheelsIn)
 {
 	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
@@ -144,26 +144,28 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 			LastOutput = SimulationOutput;
 		}
 
-		if (SimulationOutput.FrameCounter != GFrameCounter)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, FString::Printf(TEXT("Simulation behind by %lld frames!!!"), GFrameCounter - SimulationOutput.FrameCounter));
-		}
-
 		auto& PTransmission = PVehicle->GetTransmission();
 
 		bool bWheelsInContact = false;
 		float WheelRPM = 0;
+		int32 SampledWheels = 0;
 		for (int I = 0; I < PVehicle->Wheels.Num(); I++)
 		{
-			if (PVehicle->Wheels[I].EngineEnabled)
+			if (PVehicle->Wheels[I].EngineEnabled && PVehicle->Wheels[I].bInContact)
 			{
-				WheelRPM = PVehicle->Wheels[I].GetWheelRPM();
 				//UE_LOG(LogTemp, Warning, TEXT("Wheel[%d]: rpm: %f"), I, WheelRPM);
 				if (PVehicle->Wheels[I].bInContact)
 				{
+					WheelRPM += PVehicle->Wheels[I].GetWheelRPM();
 					bWheelsInContact = true;
+					SampledWheels++;
 				}
 			}
+		}
+
+		if (SampledWheels > 0)
+		{
+			WheelRPM /= SampledWheels;
 		}
 
 		float DynoSpeed = WheelRPM * PTransmission.Setup().FinalDriveRatio;
@@ -190,8 +192,14 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 			if (PWheel.Setup().EngineEnabled)
 			{
 				float OutWheelTorque = Chaos::TorqueMToCm(SimulationOutput.Torque * PTransmission.Setup().FinalDriveRatio) * PWheel.Setup().TorqueRatio;
-				OutWheelTorque *= FMath::Sign(PWheel.GetWheelRPM());
-				PWheel.SetDriveTorque(OutWheelTorque);
+				//if (FMath::Sign(PWheel.GetWheelRPM()) < 0.f)
+				//{
+				//	PWheel.SetDriveTorque(FMath::Abs(OutWheelTorque));
+				//}
+				//else
+				//{
+					PWheel.SetDriveTorque(OutWheelTorque);
+				//}
 			}
 			else
 			{
@@ -236,4 +244,9 @@ FEngineSimulatorOutput UEngineSimulatorWheeledVehicleSimulation::GetLastOutput()
 {
 	FScopeLock Lock(&LastOutputMutex);
 	return LastOutput;
+}
+
+void UEngineSimulatorWheeledVehicleSimulation::Reset(USoundWaveProcedural* OutputEngineSound)
+{
+	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
 }

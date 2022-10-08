@@ -71,18 +71,27 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimChangeGearDown
 
 void UEngineSimulatorWheeledVehicleMovementComponent::RespawnEngine()
 {
-	VehicleSimulationPT.Reset();
+	// Make the Vehicle Simulation class that will be updated from the physics thread async callback
+	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->Reset(OutputEngineSound);
+
+	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([](IEngineSimulatorInterface* EngineInterface)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Enabling dyno, ignition, starter"));
+		EngineInterface->SetIgnitionEnabled(true);
+		EngineInterface->SetStarterEnabled(true);
+	});
+
+	CurrentGear = -1;
 }
 
 TUniquePtr<Chaos::FSimpleWheeledVehicle> UEngineSimulatorWheeledVehicleMovementComponent::CreatePhysicsVehicle() 
 {
 	// Make the Vehicle Simulation class that will be updated from the physics thread async callback
-	VehicleSimulationPT = MakeUnique<UEngineSimulatorWheeledVehicleSimulation>(Wheels, EngineSound, OutputEngineSound);
+	VehicleSimulationPT = MakeUnique<UEngineSimulatorWheeledVehicleSimulation>(Wheels, OutputEngineSound);
 
 	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([](IEngineSimulatorInterface* EngineInterface)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Enabling dyno, ignition, starter"));
-		EngineInterface->SetDynoEnabled(true);
 		EngineInterface->SetIgnitionEnabled(true);
 		EngineInterface->SetStarterEnabled(true);
 	});

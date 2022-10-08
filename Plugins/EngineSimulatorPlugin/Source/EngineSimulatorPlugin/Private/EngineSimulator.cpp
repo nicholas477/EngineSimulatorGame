@@ -45,7 +45,7 @@ class FEngineSimulator : public IEngineSimulatorInterface
 {
 public:
     FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput);
-    virtual ~FEngineSimulator() {};
+    virtual ~FEngineSimulator();
 
     // IEngineSimulatorInterface
     virtual void Simulate(float DeltaTime) override { process(DeltaTime); }
@@ -151,6 +151,16 @@ FEngineSimulator::FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput)
     {
         SoundWaveOutput->OnSoundWaveProceduralUnderflow.BindRaw(this, &FEngineSimulator::FillAudio);
     }
+}
+
+FEngineSimulator::~FEngineSimulator()
+{
+    if (SoundWaveOutput)
+    {
+        SoundWaveOutput->OnSoundWaveProceduralUnderflow.Unbind();
+    }
+    m_simulator.endAudioRenderingThread();
+    //SoundWaveOutput->
 }
 
 void FEngineSimulator::loadScript()
@@ -292,26 +302,6 @@ void FEngineSimulator::loadEngine(Engine* engine, Vehicle* vehicle, Transmission
         waveFile.DestroyInternalBuffer();
 
         bLoadedEngineSound = true;
-
-        //if (EngineSound)
-        //{
-        //    int32 NumSamples = EngineSound->RawData.GetBulkDataSize() / sizeof(int16);
-        //    if (NumSamples > 0)
-        //    {
-        //        //check(EngineSound->RawData.GetElementSize() == sizeof(int16_t));
-        //        m_simulator.getSynthesizer()->initializeImpulseResponse(
-        //            reinterpret_cast<const int16_t*>(EngineSound->RawData.LockReadOnly()),
-        //            NumSamples,
-        //            response->getVolume(),
-        //            i
-        //        );
-
-        //        bLoadedEngineSound = true;
-        //        EngineSound->RawData.Unlock();
-        //    }
-        //}
-
-        //waveFile.DestroyInternalBuffer();
     }
 
     if (bLoadedEngineSound)
@@ -345,8 +335,8 @@ void FEngineSimulator::process(float frame_dt)
     //}
 
     //m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
-    m_simulator.m_dyno.m_rotationSpeed = FMath::Abs(m_dynoSpeed);
-    m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > units::rpm(-100.f); // Only run ignition in forward
+    m_simulator.m_dyno.m_rotationSpeed = FMath::Max(m_dynoSpeed, 0.f);
+    //m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > units::rpm(-100.f); // Only run ignition in forward
     m_simulator.startFrame(frame_dt);
 
     auto proc_t0 = std::chrono::steady_clock::now();

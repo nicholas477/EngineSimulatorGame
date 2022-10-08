@@ -66,7 +66,6 @@ public class EngineSim : ModuleRules
         //    || !File.Exists(EngineSimScriptInterpreterLibPath)
         //    || !File.Exists(ConstraintResolverLibPath)
         //    || !File.Exists(PiranhaLibPath))
-
         {
             var configureCommand = CreateCMakeBuildCommand(Target, buildPath, buildType);
             var configureCode = ExecuteCommandSync(configureCommand);
@@ -147,10 +146,11 @@ public class EngineSim : ModuleRules
                         AddBisonDeps() +
                         AddBoost(target) +
                         AddSDL(target) +
+                        " -DDTV=OFF" +
                         " -DDISCORD_ENABLED=OFF" +
                         " -DPIRANHA_ENABLED=ON" +
-                        " -DBUILD_APP_AS_LIB=ON" +
-                        " -DBUILD_APP=OFF" +
+                        " -DBUILD_APP_LIB=ON" +
+                        " -DBUILD_APP=ON" +
                         " -DCMAKE_BUILD_TYPE=" + buildType +
 						" -DCMAKE_INSTALL_PREFIX=\"" + installPath + "\"";
 

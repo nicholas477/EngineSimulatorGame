@@ -40,6 +40,9 @@ struct FEngineSimulatorOutput
 		FString Name;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
+		int32 CurrentGear = -1;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Output")
 		int32 NumGears = 1;
 
 	uint64 FrameCounter = 0;
@@ -89,7 +92,7 @@ protected:
 class UEngineSimulatorWheeledVehicleSimulation : public UChaosWheeledVehicleSimulation
 {
 public:
-	UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, class USoundWave* EngineSound, class USoundWaveProcedural* OutputEngineSound);
+	UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, class USoundWaveProcedural* OutputEngineSound);
 
 	/** Update the engine/transmission simulation */
 	virtual void ProcessMechanicalSimulation(float DeltaTime) override;
@@ -102,6 +105,9 @@ public:
 	void PrintDebugInfo(UWorld* World);
 
 	FEngineSimulatorOutput GetLastOutput();
+
+	// Destroys the engine and the engine thread and remakes them
+	void Reset(class USoundWaveProcedural* OutputEngineSound);
 
 protected:
 	TUniquePtr<FEngineSimulatorThread> EngineSimulatorThread;
