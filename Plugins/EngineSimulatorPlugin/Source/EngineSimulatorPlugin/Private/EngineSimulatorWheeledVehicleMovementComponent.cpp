@@ -69,18 +69,9 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimChangeGearDown
 	}
 }
 
-void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimEnableDyno(bool bEnableDyno)
+void UEngineSimulatorWheeledVehicleMovementComponent::RespawnEngine()
 {
-	bClutchIn = !bEnableDyno;
-	if (VehicleSimulationPT)
-	{
-		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([bEnableDyno](IEngineSimulatorInterface* EngineInterface)
-		{
-			EngineInterface->SetDynoEnabled(bEnableDyno);
-
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("Enabled dyno: %s"), bEnableDyno ? TEXT("True") : TEXT("False")));
-		});
-	}
+	VehicleSimulationPT.Reset();
 }
 
 TUniquePtr<Chaos::FSimpleWheeledVehicle> UEngineSimulatorWheeledVehicleMovementComponent::CreatePhysicsVehicle() 

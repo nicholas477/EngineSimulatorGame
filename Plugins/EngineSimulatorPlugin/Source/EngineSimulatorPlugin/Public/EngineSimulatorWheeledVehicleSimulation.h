@@ -9,6 +9,7 @@
 #include "EngineSimulatorWheeledVehicleSimulation.generated.h"
 
 class IEngineSimulatorInterface;
+class USoundWaveProcedural;
 
 struct FEngineSimulatorInput
 {
@@ -49,7 +50,7 @@ class FEngineSimulatorThread : public FRunnable
 public:
 
 	// Constructor, create the thread by calling this
-	FEngineSimulatorThread(IEngineSimulatorInterface* InEngine);
+	FEngineSimulatorThread(USoundWaveProcedural* InSoundWaveOutput);
 
 	// Destructor
 	virtual ~FEngineSimulatorThread() override;
@@ -74,7 +75,8 @@ protected:
 	FEngineSimulatorOutput Output;
 
 	FEvent* Semaphore;
-	IEngineSimulatorInterface* EngineSimulator;
+	TUniquePtr<IEngineSimulatorInterface> EngineSimulator;
+	USoundWaveProcedural* SoundWaveOutput;
 
 	TQueue<TFunction<void(IEngineSimulatorInterface*)>, EQueueMode::Mpsc> UpdateQueue;
 	TFunction<void(UWorld* World)> DebugPrint;
@@ -102,7 +104,6 @@ public:
 	FEngineSimulatorOutput GetLastOutput();
 
 protected:
-	TUniquePtr<IEngineSimulatorInterface> EngineSimulator;
 	TUniquePtr<FEngineSimulatorThread> EngineSimulatorThread;
 
 	FEngineSimulatorOutput LastOutput;

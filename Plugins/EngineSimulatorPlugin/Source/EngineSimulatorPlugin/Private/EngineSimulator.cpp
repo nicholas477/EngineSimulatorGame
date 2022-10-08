@@ -44,7 +44,7 @@ typedef unsigned int SampleOffset;
 class FEngineSimulator : public IEngineSimulatorInterface
 {
 public:
-    FEngineSimulator(USoundWave* EngineSound, USoundWaveProcedural* InSoundWaveOutput);
+    FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput);
     virtual ~FEngineSimulator() {};
 
     // IEngineSimulatorInterface
@@ -103,7 +103,6 @@ protected:
 
     bool m_dynoEnabled;
     float m_dynoSpeed;
-    USoundWave* EngineSound;
     USoundWaveProcedural* SoundWaveOutput;
 
     //ysAudioBuffer* m_outputAudioBuffer;
@@ -115,7 +114,7 @@ protected:
     void FillAudio(USoundWaveProcedural* Wave, const int32 SamplesNeeded);
 };
 
-FEngineSimulator::FEngineSimulator(USoundWave* InEngineSound, USoundWaveProcedural* InSoundWaveOutput)
+FEngineSimulator::FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput)
 {
     m_vehicle = nullptr;
     m_transmission = nullptr;
@@ -124,7 +123,6 @@ FEngineSimulator::FEngineSimulator(USoundWave* InEngineSound, USoundWaveProcedur
     m_dynoEnabled = true;
     m_dynoSpeed = 0;
 
-    EngineSound = InEngineSound;
     SoundWaveOutput = InSoundWaveOutput;
 
     PlayCursor = 0;
@@ -348,7 +346,7 @@ void FEngineSimulator::process(float frame_dt)
 
     //m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
     m_simulator.m_dyno.m_rotationSpeed = FMath::Abs(m_dynoSpeed);
-    m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > 0; // Only run ignition in forward
+    m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > units::rpm(-100.f); // Only run ignition in forward
     m_simulator.startFrame(frame_dt);
 
     auto proc_t0 = std::chrono::steady_clock::now();
@@ -471,7 +469,7 @@ void FEngineSimulator::FillAudio(USoundWaveProcedural* Wave, const int32 Samples
 }
 
 
-TUniquePtr<IEngineSimulatorInterface> CreateEngine(USoundWave* EngineSound, USoundWaveProcedural* SoundWaveOutput)
+TUniquePtr<IEngineSimulatorInterface> CreateEngine(USoundWaveProcedural* SoundWaveOutput)
 {
-    return MakeUnique<FEngineSimulator>(EngineSound, SoundWaveOutput);
+    return MakeUnique<FEngineSimulator>(SoundWaveOutput);
 }

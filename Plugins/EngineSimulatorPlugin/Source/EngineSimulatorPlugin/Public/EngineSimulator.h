@@ -33,4 +33,4 @@ public:
 	virtual ~IEngineSimulatorInterface() {};
 };
 
-TUniquePtr<IEngineSimulatorInterface> CreateEngine(class USoundWave* EngineSound, class USoundWaveProcedural* SoundWaveOutput);
+TUniquePtr<IEngineSimulatorInterface> CreateEngine(class USoundWaveProcedural* SoundWaveOutput);

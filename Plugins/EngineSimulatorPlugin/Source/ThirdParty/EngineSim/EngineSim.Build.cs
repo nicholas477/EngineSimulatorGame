@@ -159,16 +159,16 @@ public class EngineSim : ModuleRules
 
     private string AddFlexDeps()
     {
-        var flexFolder = "win_flex_bison3-latest";
+        var flexFolder = "WinFlexBison";
         var rootDirectory = ModulePath;
-        return " -DFLEX_EXECUTABLE=\"" + Path.Combine(rootDirectory, "engine-sim/_deps", flexFolder, "win_flex.exe") + "\"";
+        return " -DFLEX_EXECUTABLE=\"" + Path.Combine(EngineSimPath, flexFolder, "win_flex.exe") + "\"";
     }
 
     private string AddBisonDeps()
     {
-        var bisonFolder = "win_flex_bison3-latest";
+        var bisonFolder = "WinFlexBison";
         var rootDirectory = ModulePath;
-        return " -DBISON_EXECUTABLE=\"" + Path.Combine(rootDirectory, "engine-sim/_deps", bisonFolder, "win_bison.exe") + "\"";
+        return " -DBISON_EXECUTABLE=\"" + Path.Combine(EngineSimPath, bisonFolder, "win_bison.exe") + "\"";
     }
 
     private string AddBoost(ReadOnlyTargetRules target)

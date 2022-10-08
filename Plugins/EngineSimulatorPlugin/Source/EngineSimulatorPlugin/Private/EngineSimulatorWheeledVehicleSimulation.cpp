@@ -11,10 +11,10 @@
 DECLARE_STATS_GROUP(TEXT("EngineSimulatorPlugin"), STATGROUP_EngineSimulatorPlugin, STATGROUP_Advanced);
 DECLARE_CYCLE_STAT(TEXT("EngineThread:UpdateSimulation"), STAT_EngineSimulatorPlugin_UpdateSimulation, STATGROUP_EngineSimulatorPlugin);
 
-FEngineSimulatorThread::FEngineSimulatorThread(IEngineSimulatorInterface* InEngine)
+FEngineSimulatorThread::FEngineSimulatorThread(USoundWaveProcedural* InSoundWaveOutput)
 	: bStopRequested(false)
 	, Semaphore(FGenericPlatformProcess::GetSynchEventFromPool(false))
-	, EngineSimulator(InEngine)
+	, SoundWaveOutput(InSoundWaveOutput)
 	, Thread(FRunnableThread::Create(this, TEXT("Engine Simulator Thread"))) // TODO: change this later
 {
 	
@@ -42,6 +42,8 @@ bool FEngineSimulatorThread::Init()
 
 uint32 FEngineSimulatorThread::Run()
 {
+	EngineSimulator = CreateEngine(SoundWaveOutput);
+
 	while (!bStopRequested)
 	{
 		Semaphore->Wait();
@@ -66,24 +68,28 @@ uint32 FEngineSimulatorThread::Run()
 				TFunction<void(IEngineSimulatorInterface*)> SimulationUpdate;
 				while (UpdateQueue.Dequeue(SimulationUpdate))
 				{
-					SimulationUpdate(EngineSimulator);
+					SimulationUpdate(EngineSimulator.Get());
 				}
 
 				EngineSimulator->Simulate(ThisInput.DeltaTime);
 
 				float TransmissionTorque = EngineSimulator->GetFilteredDynoTorque() * EngineSimulator->GetGearRatio();
 
-				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed](UWorld* World)
+				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed, Grounded = ThisInput.InContactWithGround](UWorld* World)
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Tranmission torque: %f"), T));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation RPM: %f"), RPM));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Speed: %f"), Speed));
 					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Dyno Speed (RPM): %f"), DynoSpeed));
+					if (!Grounded)
+					{
+						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("Engine in air, dyno disabled")));
+					}
 				};
 
 				{
 					FScopeLock Lock(&OutputMutex);
-					Output.Torque = TransmissionTorque * FMath::Sign(ThisInput.EngineRPM);
+					Output.Torque = TransmissionTorque;
 					Output.RPM = EngineSimulator->GetRPM();
 					Output.Redline = EngineSimulator->GetRedLine();
 					Output.Horsepower = EngineSimulator->GetDynoPower();
@@ -119,8 +125,7 @@ UEngineSimulatorWheeledVehicleSimulation::UEngineSimulatorWheeledVehicleSimulati
 	USoundWave* EngineSound, class USoundWaveProcedural* OutputEngineSound)
 	: UChaosWheeledVehicleSimulation(WheelsIn)
 {
-	EngineSimulator = CreateEngine(EngineSound, OutputEngineSound);
-	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(EngineSimulator.Get());
+	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
 }
 
 void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float DeltaTime)
@@ -184,7 +189,9 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 			//PWheel.bInContact = true; // fuck you epic
 			if (PWheel.Setup().EngineEnabled)
 			{
-				PWheel.SetDriveTorque(Chaos::TorqueMToCm(SimulationOutput.Torque * PTransmission.Setup().FinalDriveRatio) * PWheel.Setup().TorqueRatio);
+				float OutWheelTorque = Chaos::TorqueMToCm(SimulationOutput.Torque * PTransmission.Setup().FinalDriveRatio) * PWheel.Setup().TorqueRatio;
+				OutWheelTorque *= FMath::Sign(PWheel.GetWheelRPM());
+				PWheel.SetDriveTorque(OutWheelTorque);
 			}
 			else
 			{

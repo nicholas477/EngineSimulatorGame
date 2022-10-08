@@ -27,7 +27,7 @@ class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent 
 	void SetEngineSimChangeGearDown(bool bNewGearDown);
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
-	void SetEngineSimEnableDyno(bool bEnableDyno);
+	void RespawnEngine();
 
 	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
 		bool bClutchIn = false;
