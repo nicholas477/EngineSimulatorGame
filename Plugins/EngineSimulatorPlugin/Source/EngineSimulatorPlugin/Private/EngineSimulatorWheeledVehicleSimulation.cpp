@@ -151,15 +151,11 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 		int32 SampledWheels = 0;
 		for (int I = 0; I < PVehicle->Wheels.Num(); I++)
 		{
-			if (PVehicle->Wheels[I].EngineEnabled && PVehicle->Wheels[I].bInContact)
+			if (PVehicle->Wheels[I].EngineEnabled && PVehicle->Wheels[I].bInContact && !PVehicle->Wheels[I].IsSlipping())
 			{
-				//UE_LOG(LogTemp, Warning, TEXT("Wheel[%d]: rpm: %f"), I, WheelRPM);
-				if (PVehicle->Wheels[I].bInContact)
-				{
-					WheelRPM += PVehicle->Wheels[I].GetWheelRPM();
-					bWheelsInContact = true;
-					SampledWheels++;
-				}
+				WheelRPM += PVehicle->Wheels[I].GetWheelRPM();
+				bWheelsInContact = true;
+				SampledWheels++;
 			}
 		}
 

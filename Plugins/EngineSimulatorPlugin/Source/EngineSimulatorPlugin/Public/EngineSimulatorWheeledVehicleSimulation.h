@@ -93,6 +93,7 @@ class UEngineSimulatorWheeledVehicleSimulation : public UChaosWheeledVehicleSimu
 {
 public:
 	UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, class USoundWaveProcedural* OutputEngineSound);
+	virtual ~UEngineSimulatorWheeledVehicleSimulation() = default;
 
 	/** Update the engine/transmission simulation */
 	virtual void ProcessMechanicalSimulation(float DeltaTime) override;
