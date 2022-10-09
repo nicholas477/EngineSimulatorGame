@@ -49,19 +49,95 @@ public:
 
     // IEngineSimulatorInterface
     virtual void Simulate(float DeltaTime) override { process(DeltaTime); }
+
     virtual void SetDynoEnabled(bool bEnabled) { m_dynoEnabled = bEnabled; }
-    virtual void SetStarterEnabled(bool bEnabled) { m_simulator.m_starterMotor.m_enabled = bEnabled; }
-    virtual void SetIgnitionEnabled(bool bEnabled) { m_simulator.getEngine()->getIgnitionModule()->m_enabled = bEnabled; }
+
+    virtual void SetStarterEnabled(bool bEnabled)
+    {
+        m_simulator.m_starterMotor.m_enabled = bEnabled;
+    }
+    virtual void SetIgnitionEnabled(bool bEnabled)
+    { 
+        if (m_simulator.getEngine() && m_simulator.getEngine()->getIgnitionModule())
+        {
+            m_simulator.getEngine()->getIgnitionModule()->m_enabled = bEnabled;
+        }
+    }
     virtual void SetDynoSpeed(float RPM) { m_dynoSpeed = units::rpm(RPM); };
-    virtual void SetSpeedControl(float SpeedControl) { m_iceEngine->setSpeedControl(SpeedControl); }
-    virtual void SetGear(int32 Gear) { m_simulator.getTransmission()->changeGear(Gear); };
-    virtual int32 GetGear() { return m_simulator.getTransmission()->getGear(); };
-    virtual int32 GetGearCount() { return m_simulator.getTransmission()->getGearCount(); }
-    virtual float GetSpeed() { return m_simulator.getEngine()->getSpeed(); };
-    virtual float GetRPM() { return m_simulator.getEngine()->getRpm(); };
-    virtual float GetRedLine() { return units::toRpm(m_simulator.getEngine()->getRedline()); };
-    virtual float GetFilteredDynoTorque() { return m_simulator.getFilteredDynoTorque(); };
-    virtual float GetDynoPower() { return units::convert(m_simulator.getDynoPower(), units::hp); }
+
+    virtual void SetSpeedControl(float SpeedControl)
+    { 
+        if (m_iceEngine)
+        {
+            m_iceEngine->setSpeedControl(SpeedControl);
+        }
+    }
+
+    virtual void SetGear(int32 Gear)
+    {
+        if (m_simulator.getTransmission())
+        {
+            m_simulator.getTransmission()->changeGear(Gear);
+        }
+    }
+
+    virtual int32 GetGear()
+    {
+        if (m_simulator.getTransmission())
+        {
+            return m_simulator.getTransmission()->getGear();
+        }
+
+        return -1;
+    }
+
+    virtual int32 GetGearCount()
+    {
+        if (m_simulator.getTransmission())
+        {
+            return m_simulator.getTransmission()->getGearCount();
+        }
+        return 0;
+    }
+
+    virtual float GetSpeed()
+    {
+        if (m_simulator.getEngine())
+        {
+            return m_simulator.getEngine()->getSpeed();
+        }
+        return 0.f;
+    }
+
+    virtual float GetRPM()
+    {
+        if (m_simulator.getEngine())
+        {
+            return m_simulator.getEngine()->getRpm();
+        }
+
+        return 0.f;
+    }
+
+    virtual float GetRedLine()
+    {
+        if (m_simulator.getEngine())
+        {
+            return units::toRpm(m_simulator.getEngine()->getRedline());
+        }
+        return 0.f;
+    }
+
+    virtual float GetFilteredDynoTorque()
+    {
+        return m_simulator.getFilteredDynoTorque();
+    }
+
+    virtual float GetDynoPower()
+    {
+        return units::convert(m_simulator.getDynoPower(), units::hp);
+    }
+
     virtual float GetGearRatio()
     {
         if (m_simulator.getTransmission())
@@ -76,17 +152,26 @@ public:
                 return 0.f;
             }
         }
-
-
         return 0.f;
     }
+
     virtual bool IsDynoEnabled()
     {
         return m_simulator.m_dyno.m_enabled;
     }
+
+    virtual bool HasEngine()
+    {
+        return m_simulator.getEngine() != nullptr;
+    }
+    
     virtual FString GetName()
     {
-        return FString(UTF8_TO_TCHAR(m_simulator.getEngine()->getName().c_str()));
+        if (m_simulator.getEngine())
+        {
+            return FString(UTF8_TO_TCHAR(m_simulator.getEngine()->getName().c_str()));
+        }
+        return "";
     }
     // End IEngineSimulatorInterface
 
@@ -105,11 +190,9 @@ protected:
     float m_dynoSpeed;
     USoundWaveProcedural* SoundWaveOutput;
 
-    //ysAudioBuffer* m_outputAudioBuffer;
     AudioBuffer m_audioBuffer;
     uint32 PlayCursor;
     std::vector<uint8> Buffer;
-    //ysAudioSource* m_audioSource;
 
     void FillAudio(USoundWaveProcedural* Wave, const int32 SamplesNeeded);
 };
@@ -314,101 +397,104 @@ void FEngineSimulator::process(float frame_dt)
 {
     frame_dt = static_cast<float>(clamp(frame_dt, 1 / 200.0f, 1 / 30.0f));
 
-    m_simulator.setSimulationSpeed(1.0f);
+    if (m_transmission && m_iceEngine && m_vehicle)
+    {
+        m_simulator.setSimulationSpeed(1.0f);
 
-    m_simulator.m_dyno.m_enabled = (m_simulator.getTransmission()->getGear() != -1) && m_dynoEnabled;
+        m_simulator.m_dyno.m_enabled = (m_simulator.getTransmission()->getGear() != -1) && m_dynoEnabled;
 
-    //if (m_simulator.m_dyno.m_enabled) {
-    //    if (!m_simulator.m_dyno.m_hold) {
-    //        if (m_simulator.getFilteredDynoTorque() > units::torque(1.0, units::ft_lb)) {
-    //            m_dynoSpeed += units::rpm(500) * frame_dt;
-    //        }
-    //        else {
-    //            m_dynoSpeed *= (1 / (1 + frame_dt));
-    //        }
-    //    }
-    //}
+        //if (m_simulator.m_dyno.m_enabled) {
+        //    if (!m_simulator.m_dyno.m_hold) {
+        //        if (m_simulator.getFilteredDynoTorque() > units::torque(1.0, units::ft_lb)) {
+        //            m_dynoSpeed += units::rpm(500) * frame_dt;
+        //        }
+        //        else {
+        //            m_dynoSpeed *= (1 / (1 + frame_dt));
+        //        }
+        //    }
+        //}
 
-    //if ((m_dynoSpeed + units::rpm(1000)) > m_iceEngine->getRedline()) {
-    //    m_simulator.m_dyno.m_enabled = false;
-    //    m_dynoSpeed = units::rpm(0);
-    //}
+        //if ((m_dynoSpeed + units::rpm(1000)) > m_iceEngine->getRedline()) {
+        //    m_simulator.m_dyno.m_enabled = false;
+        //    m_dynoSpeed = units::rpm(0);
+        //}
 
-    //m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
-    m_simulator.m_dyno.m_rotationSpeed = FMath::Max(m_dynoSpeed, 0.f);
-    //m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > units::rpm(-100.f); // Only run ignition in forward
-    m_simulator.startFrame(frame_dt);
+        //m_simulator.m_dyno.m_rotationSpeed = m_dynoSpeed + units::rpm(1000);
+        m_simulator.m_dyno.m_rotationSpeed = FMath::Max(m_dynoSpeed, 0.f);
+        //m_simulator.getEngine()->getIgnitionModule()->m_enabled = m_dynoSpeed > units::rpm(-100.f); // Only run ignition in forward
+        m_simulator.startFrame(frame_dt);
 
-    auto proc_t0 = std::chrono::steady_clock::now();
-    const int iterationCount = m_simulator.getFrameIterationCount();
-    while (m_simulator.simulateStep()) {
-        //m_oscCluster->sample();
+        auto proc_t0 = std::chrono::steady_clock::now();
+        const int iterationCount = m_simulator.getFrameIterationCount();
+        while (m_simulator.simulateStep()) {
+            //m_oscCluster->sample();
+        }
+
+        auto proc_t1 = std::chrono::steady_clock::now();
+
+        m_simulator.endFrame();
+
+        auto duration = proc_t1 - proc_t0;
+        if (iterationCount > 0) {
+            //m_performanceCluster->addTimePerTimestepSample(
+            //    (duration.count() / 1E9) / iterationCount);
+        }
+
+        //const SampleOffset safeWritePosition = m_audioSource->GetCurrentWritePosition();
+        //const SampleOffset writePosition = m_audioBuffer.m_writePointer;
+
+        ////SampleOffset targetWritePosition =
+        ////    m_audioBuffer.getBufferIndex(safeWritePosition, (int)(44100 * 0.1));
+        //SampleOffset maxWrite = m_audioBuffer.offsetDelta(writePosition, targetWritePosition);
+
+        //SampleOffset currentLead = m_audioBuffer.offsetDelta(safeWritePosition, writePosition);
+        //SampleOffset newLead = m_audioBuffer.offsetDelta(safeWritePosition, targetWritePosition);
+
+        //if (currentLead > 44100 * 0.5) {
+        //    m_audioBuffer.m_writePointer = m_audioBuffer.getBufferIndex(safeWritePosition, (int)(44100 * 0.05));
+        //    currentLead = m_audioBuffer.offsetDelta(safeWritePosition, m_audioBuffer.m_writePointer);
+        //    maxWrite = m_audioBuffer.offsetDelta(m_audioBuffer.m_writePointer, targetWritePosition);
+        //}
+
+        //if (currentLead > newLead) {
+        //    maxWrite = 0;
+        //}
+
+        //int16_t* samples = new int16_t[maxWrite];
+        //const int readSamples = m_simulator.readAudioOutput(maxWrite, samples);
+
+        //for (SampleOffset i = 0; i < (SampleOffset)readSamples && i < maxWrite; ++i) {
+        //    const int16_t sample = samples[i];
+        //    //if (m_oscillatorSampleOffset % 4 == 0) {
+        //    //    m_oscCluster->getAudioWaveformOscilloscope()->addDataPoint(
+        //    //        m_oscillatorSampleOffset,
+        //    //        sample / (float)(INT16_MAX));
+        //    //}
+
+        //    m_audioBuffer.writeSample(sample, m_audioBuffer.m_writePointer, (int)i);
+
+        //    //m_oscillatorSampleOffset = (m_oscillatorSampleOffset + 1) % (44100 / 10);
+        //}
+
+        //delete[] samples;
+
+        //if (readSamples > 0) {
+        //    SampleOffset size0, size1;
+        //    void* data0, * data1;
+        //    m_audioSource->LockBufferSegment(
+        //        m_audioBuffer.m_writePointer, readSamples, &data0, &size0, &data1, &size1);
+
+        //    m_audioBuffer.copyBuffer(
+        //        reinterpret_cast<int16_t*>(data0), m_audioBuffer.m_writePointer, size0);
+        //    m_audioBuffer.copyBuffer(
+        //        reinterpret_cast<int16_t*>(data1),
+        //        m_audioBuffer.getBufferIndex(m_audioBuffer.m_writePointer, size0),
+        //        size1);
+
+        //    m_audioSource->UnlockBufferSegments(data0, size0, data1, size1);
+        //    m_audioBuffer.commitBlock(readSamples);
+        //}
     }
-
-    auto proc_t1 = std::chrono::steady_clock::now();
-
-    m_simulator.endFrame();
-
-    auto duration = proc_t1 - proc_t0;
-    if (iterationCount > 0) {
-        //m_performanceCluster->addTimePerTimestepSample(
-        //    (duration.count() / 1E9) / iterationCount);
-    }
-
-    //const SampleOffset safeWritePosition = m_audioSource->GetCurrentWritePosition();
-    //const SampleOffset writePosition = m_audioBuffer.m_writePointer;
-
-    ////SampleOffset targetWritePosition =
-    ////    m_audioBuffer.getBufferIndex(safeWritePosition, (int)(44100 * 0.1));
-    //SampleOffset maxWrite = m_audioBuffer.offsetDelta(writePosition, targetWritePosition);
-
-    //SampleOffset currentLead = m_audioBuffer.offsetDelta(safeWritePosition, writePosition);
-    //SampleOffset newLead = m_audioBuffer.offsetDelta(safeWritePosition, targetWritePosition);
-
-    //if (currentLead > 44100 * 0.5) {
-    //    m_audioBuffer.m_writePointer = m_audioBuffer.getBufferIndex(safeWritePosition, (int)(44100 * 0.05));
-    //    currentLead = m_audioBuffer.offsetDelta(safeWritePosition, m_audioBuffer.m_writePointer);
-    //    maxWrite = m_audioBuffer.offsetDelta(m_audioBuffer.m_writePointer, targetWritePosition);
-    //}
-
-    //if (currentLead > newLead) {
-    //    maxWrite = 0;
-    //}
-
-    //int16_t* samples = new int16_t[maxWrite];
-    //const int readSamples = m_simulator.readAudioOutput(maxWrite, samples);
-
-    //for (SampleOffset i = 0; i < (SampleOffset)readSamples && i < maxWrite; ++i) {
-    //    const int16_t sample = samples[i];
-    //    //if (m_oscillatorSampleOffset % 4 == 0) {
-    //    //    m_oscCluster->getAudioWaveformOscilloscope()->addDataPoint(
-    //    //        m_oscillatorSampleOffset,
-    //    //        sample / (float)(INT16_MAX));
-    //    //}
-
-    //    m_audioBuffer.writeSample(sample, m_audioBuffer.m_writePointer, (int)i);
-
-    //    //m_oscillatorSampleOffset = (m_oscillatorSampleOffset + 1) % (44100 / 10);
-    //}
-
-    //delete[] samples;
-
-    //if (readSamples > 0) {
-    //    SampleOffset size0, size1;
-    //    void* data0, * data1;
-    //    m_audioSource->LockBufferSegment(
-    //        m_audioBuffer.m_writePointer, readSamples, &data0, &size0, &data1, &size1);
-
-    //    m_audioBuffer.copyBuffer(
-    //        reinterpret_cast<int16_t*>(data0), m_audioBuffer.m_writePointer, size0);
-    //    m_audioBuffer.copyBuffer(
-    //        reinterpret_cast<int16_t*>(data1),
-    //        m_audioBuffer.getBufferIndex(m_audioBuffer.m_writePointer, size0),
-    //        size1);
-
-    //    m_audioSource->UnlockBufferSegments(data0, size0, data1, size1);
-    //    m_audioBuffer.commitBlock(readSamples);
-    //}
 }
 
 const static int32 SampleRate = 44100;

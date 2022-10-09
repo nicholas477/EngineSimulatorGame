@@ -73,15 +73,22 @@ uint32 FEngineSimulatorThread::Run()
 
 				float TransmissionTorque = EngineSimulator->GetFilteredDynoTorque() * EngineSimulator->GetGearRatio();
 
-				DebugPrint = [T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed, Grounded = ThisInput.InContactWithGround](UWorld* World)
+				DebugPrint = [bHasEngine = EngineSimulator->HasEngine(), T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed, Grounded = ThisInput.InContactWithGround](UWorld* World)
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Tranmission torque: %f"), T));
-					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation RPM: %f"), RPM));
-					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Speed: %f"), Speed));
-					GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Dyno Speed (RPM): %f"), DynoSpeed));
-					if (!Grounded)
+					if (bHasEngine)
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("Engine in air, dyno disabled")));
+						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Tranmission torque: %f"), T));
+						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation RPM: %f"), RPM));
+						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Speed: %f"), Speed));
+						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Dyno Speed (RPM): %f"), DynoSpeed));
+						if (!Grounded)
+						{
+							GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("Engine in air, dyno disabled")));
+						}
+					}
+					else
+					{
+						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("FAILED TO LOAD ENGINE")));
 					}
 				};
 
@@ -151,7 +158,9 @@ void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float
 		int32 SampledWheels = 0;
 		for (int I = 0; I < PVehicle->Wheels.Num(); I++)
 		{
-			if (PVehicle->Wheels[I].EngineEnabled && PVehicle->Wheels[I].bInContact && !PVehicle->Wheels[I].IsSlipping())
+			if (PVehicle->Wheels[I].EngineEnabled 
+				&& PVehicle->Wheels[I].bInContact 
+				&& !PVehicle->Wheels[I].IsSlipping())
 			{
 				WheelRPM += PVehicle->Wheels[I].GetWheelRPM();
 				bWheelsInContact = true;
