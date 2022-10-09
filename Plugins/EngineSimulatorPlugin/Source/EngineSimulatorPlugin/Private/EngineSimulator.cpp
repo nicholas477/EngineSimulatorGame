@@ -85,7 +85,7 @@ public:
     {
         if (m_simulator.getTransmission())
         {
-            m_simulator.getTransmission()->setClutchPressure(FMath::Clamp(Pressure, 0.f, 1.f));
+            m_simulator.m_dyno.m_clutchPressure = FMath::Clamp(Pressure, 0.f, 1.f);
         }
     }
 
