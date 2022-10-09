@@ -12,10 +12,6 @@
 	],
 	"Plugins": [
 		{
-			"Name": "ChaosVehiclesPlugin",
-			"Enabled": true
-		},
-		{
 			"Name": "RawInput",
 			"Enabled": true
 		},

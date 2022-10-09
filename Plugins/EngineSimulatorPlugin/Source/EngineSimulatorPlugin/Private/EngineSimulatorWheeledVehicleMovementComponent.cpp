@@ -84,6 +84,19 @@ void UEngineSimulatorWheeledVehicleMovementComponent::RespawnEngine()
 	CurrentGear = -1;
 }
 
+void UEngineSimulatorWheeledVehicleMovementComponent::SetClutchPressure(float Pressure)
+{
+	ClutchPressure = Pressure;
+	if (VehicleSimulationPT)
+	{
+		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
+			{
+				EngineInterface->SetClutchPressure(Pressure);
+			}
+		);
+	}
+}
+
 TUniquePtr<Chaos::FSimpleWheeledVehicle> UEngineSimulatorWheeledVehicleMovementComponent::CreatePhysicsVehicle() 
 {
 	// Make the Vehicle Simulation class that will be updated from the physics thread async callback

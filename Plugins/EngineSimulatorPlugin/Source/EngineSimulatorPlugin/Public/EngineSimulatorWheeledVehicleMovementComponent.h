@@ -26,17 +26,18 @@ class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
 	void SetEngineSimChangeGearDown(bool bNewGearDown);
 
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
-	void RespawnEngine();
-
-	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
-		bool bClutchIn = false;
-
 	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
 		int32 CurrentGear = -1;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Engine Simulator Vehicle Movement")
-		USoundWave* EngineSound;
+	// Set clutch pressure (0 - 1)
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
+		void SetClutchPressure(float Pressure);
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
+		float ClutchPressure = 1.f;
+
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
+		void RespawnEngine();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Engine Simulator Vehicle Movement")
 		USoundWaveProcedural* OutputEngineSound;

@@ -81,6 +81,14 @@ public:
         }
     }
 
+    virtual void SetClutchPressure(float Pressure)
+    {
+        if (m_simulator.getTransmission())
+        {
+            m_simulator.getTransmission()->setClutchPressure(FMath::Clamp(Pressure, 0.f, 1.f));
+        }
+    }
+
     virtual int32 GetGear()
     {
         if (m_simulator.getTransmission())

@@ -19,12 +19,11 @@
 			"Name": "EngineSimulatorPlugin",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
-		}
-	],
-	"Plugins": [
+		},
 		{
-			"Name": "ChaosVehiclesPlugin",
-			"Enabled": true
+			"Name": "ChaosVehicles",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault"
 		}
 	]
 }

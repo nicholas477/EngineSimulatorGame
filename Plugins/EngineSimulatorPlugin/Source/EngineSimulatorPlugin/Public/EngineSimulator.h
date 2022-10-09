@@ -19,6 +19,7 @@ public:
 	virtual void SetSpeedControl(float Speed) = 0;
 	virtual void SetDynoSpeed(float RPM) = 0;
 	virtual void SetGear(int32 Gear) = 0;
+	virtual void SetClutchPressure(float Pressure) = 0;
 	//virtual void SetClutch(float Clutch) = 0;
 	virtual int32 GetGear() = 0;
 	virtual float GetSpeed() = 0;

@@ -14,7 +14,7 @@ class USoundWaveProcedural;
 struct FEngineSimulatorInput
 {
 	float DeltaTime = 1.0f / 60.f;
-	float EngineRPM = 0;
+	float EngineRPM = 0.f;
 	bool InContactWithGround = true;
 	uint64 FrameCounter = 0;
 };
