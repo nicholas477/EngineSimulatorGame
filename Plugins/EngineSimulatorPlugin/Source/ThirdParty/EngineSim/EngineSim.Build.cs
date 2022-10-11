@@ -28,7 +28,7 @@ public class EngineSim : ModuleRules
     // This runs cmake
     private bool BuildEngineSim
     {
-        get { return true; }
+        get { return false; }
     }
     
     private string GetBoostVersion(ReadOnlyTargetRules Target)
