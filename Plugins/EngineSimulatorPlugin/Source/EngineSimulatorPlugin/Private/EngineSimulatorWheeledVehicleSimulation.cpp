@@ -270,6 +270,7 @@ void UEngineSimulatorWheeledVehicleSimulation::Reset(USoundWaveProcedural* Outpu
 	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
 }
 
+#if WITH_GAMEPLAY_DEBUGGER
 void UEngineSimulatorWheeledVehicleSimulation::PrintGameplayDebuggerInfo(FGameplayDebuggerCategory* GameplayDebugger)
 {
 	if (EngineSimulatorThread && EngineSimulatorThread->GameplayDebuggerPrint)
@@ -277,3 +278,4 @@ void UEngineSimulatorWheeledVehicleSimulation::PrintGameplayDebuggerInfo(FGamepl
 		EngineSimulatorThread->GameplayDebuggerPrint(GameplayDebugger);
 	}
 }
+#endif

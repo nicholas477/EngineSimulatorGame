@@ -85,10 +85,12 @@ protected:
 	USoundWaveProcedural* SoundWaveOutput;
 
 	TQueue<TFunction<void(IEngineSimulatorInterface*)>, EQueueMode::Mpsc> UpdateQueue;
-	TFunction<void(FGameplayDebuggerCategory*)> GameplayDebuggerPrint;
 
 	FRunnableThread* Thread;
 
+#if WITH_GAMEPLAY_DEBUGGER
+	TFunction<void(FGameplayDebuggerCategory*)> GameplayDebuggerPrint;
+#endif
 	friend class UEngineSimulatorWheeledVehicleSimulation;
 };
 
@@ -111,7 +113,9 @@ public:
 	// Destroys the engine and the engine thread and remakes them
 	void Reset(class USoundWaveProcedural* OutputEngineSound);
 
+#if WITH_GAMEPLAY_DEBUGGER
 	void PrintGameplayDebuggerInfo(FGameplayDebuggerCategory* GameplayDebugger);
+#endif
 
 protected:
 	TUniquePtr<FEngineSimulatorThread> EngineSimulatorThread;

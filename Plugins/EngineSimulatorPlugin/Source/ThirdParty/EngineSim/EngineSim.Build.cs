@@ -8,6 +8,29 @@ using UnrealBuildTool;
 
 public class EngineSim : ModuleRules
 {
+    // Set up your paths here
+    private string GetEngineSimPath(ReadOnlyTargetRules Target)
+    {
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            return "C:/local/engine-sim";
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Linux)
+        {
+            return "C:/local/engine-sim-linux";
+        }
+
+        throw new BuildException("Unsupported platform");
+        return "";
+    }
+
+    // Set this to false if you've already built engine sim with cmake.
+    // This runs cmake
+    private bool BuildEngineSim
+    {
+        get { return true; }
+    }
+    
     private string BoostVersion
     {
         get { return "1_70_0"; }
@@ -28,32 +51,29 @@ public class EngineSim : ModuleRules
         get { return "C:/local/SDL2_image"; }
     }
 
+    // You do not need to set these if you are not building engine-sim with cmake
+    private string FlexPath
+    {
+        get { return "C:/local/WinFlexBison"; }
+    }
+
+    private string BisonPath
+    {
+        get { return "C:/local/WinFlexBison"; }
+    }
+
     private string ModulePath
 	{
 		get { return ModuleDirectory; }
-	}
-
-    private string EngineSimPath
-    {
-        get { return "C:/local/"; }
-    }
-
-	private string ThirdPartyPath
-	{
-		get
-		{
-			return Path.GetFullPath(Path.Combine(ModulePath,"../"));
-		}
 	}
 
 	public EngineSim(ReadOnlyTargetRules Target) : base(Target)
 	{
         Type = ModuleType.External;
 
-
         const string buildType = "RelWithDebInfo";
-        var buildDirectory = "engine-sim/build/" + buildType;
-        var buildPath = Path.Combine(EngineSimPath, buildDirectory);
+        var buildDirectory = "build/" + buildType;
+        var buildPath = Path.Combine(GetEngineSimPath(Target), buildDirectory);
 
 
         String EngineSimLibPath = Path.Combine(buildPath, buildType, "engine-sim.lib");
@@ -62,10 +82,8 @@ public class EngineSim : ModuleRules
         String ConstraintResolverLibPath = Path.Combine(buildPath, "dependencies/submodules/simple-2d-constraint-solver", buildType, "simple-2d-constraint-solver.lib");
         String PiranhaLibPath = Path.Combine(buildPath, "dependencies/submodules/piranha", buildType, "piranha.lib");
         String DeltaStudioLibPath = Path.Combine(buildPath, "dependencies/submodules/delta-studio", buildType, "delta-core.lib");
-        //if (!File.Exists(EngineSimLibPath)
-        //    || !File.Exists(EngineSimScriptInterpreterLibPath)
-        //    || !File.Exists(ConstraintResolverLibPath)
-        //    || !File.Exists(PiranhaLibPath))
+
+        if (BuildEngineSim)
         {
             var configureCommand = CreateCMakeBuildCommand(Target, buildPath, buildType);
             var configureCode = ExecuteCommandSync(configureCommand);
@@ -89,9 +107,9 @@ public class EngineSim : ModuleRules
 
         PublicDefinitions.Add("ATG_ENGINE_SIM_PIRANHA_ENABLED=1");
 
-        PublicIncludePaths.Add(Path.Combine(EngineSimPath, "engine-sim/include"));
-        PublicIncludePaths.Add(Path.Combine(EngineSimPath, "engine-sim/scripting/include"));
-        PublicIncludePaths.Add(Path.Combine(EngineSimPath, "engine-sim/dependencies/submodules"));
+        PublicIncludePaths.Add(Path.Combine(GetEngineSimPath(Target), "include"));
+        PublicIncludePaths.Add(Path.Combine(GetEngineSimPath(Target), "scripting/include"));
+        PublicIncludePaths.Add(Path.Combine(GetEngineSimPath(Target), "dependencies/submodules"));
         PublicAdditionalLibraries.Add(EngineSimLibPath);
         PublicAdditionalLibraries.Add(EngineSimScriptInterpreterLibPath);
         PublicAdditionalLibraries.Add(EngineSimAppLibPath);
@@ -132,9 +150,9 @@ public class EngineSim : ModuleRules
 		const string program = "cmake.exe";
 		var rootDirectory = ModulePath;
 		var installPath = Path.Combine(rootDirectory, "../../../Intermediate/Build/Win64/", "engine-sim");
-		var sourceDir = Path.Combine(EngineSimPath, "engine-sim");
+        var sourceDir = GetEngineSimPath(target);
 
-		string generator = GetGeneratorName(target.WindowsPlatform.Compiler);
+        string generator = GetGeneratorName(target.WindowsPlatform.Compiler);
 
 		var arguments = " -G \"" + generator + "\"" +
 						" -S \"" + sourceDir + "\"" +
@@ -150,7 +168,7 @@ public class EngineSim : ModuleRules
                         " -DDISCORD_ENABLED=OFF" +
                         " -DPIRANHA_ENABLED=ON" +
                         " -DBUILD_APP_LIB=ON" +
-                        " -DBUILD_APP=ON" +
+                        " -DBUILD_APP=OFF" +
                         " -DCMAKE_BUILD_TYPE=" + buildType +
 						" -DCMAKE_INSTALL_PREFIX=\"" + installPath + "\"";
 
@@ -159,16 +177,12 @@ public class EngineSim : ModuleRules
 
     private string AddFlexDeps()
     {
-        var flexFolder = "WinFlexBison";
-        var rootDirectory = ModulePath;
-        return " -DFLEX_EXECUTABLE=\"" + Path.Combine(EngineSimPath, flexFolder, "win_flex.exe") + "\"";
+        return " -DFLEX_EXECUTABLE=\"" + Path.Combine(FlexPath, "win_flex.exe") + "\"";
     }
 
     private string AddBisonDeps()
     {
-        var bisonFolder = "WinFlexBison";
-        var rootDirectory = ModulePath;
-        return " -DBISON_EXECUTABLE=\"" + Path.Combine(EngineSimPath, bisonFolder, "win_bison.exe") + "\"";
+        return " -DBISON_EXECUTABLE=\"" + Path.Combine(BisonPath, "win_bison.exe") + "\"";
     }
 
     private string AddBoost(ReadOnlyTargetRules target)

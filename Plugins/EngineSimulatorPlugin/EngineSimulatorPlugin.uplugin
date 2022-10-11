@@ -18,11 +18,20 @@
 		{
 			"Name": "EngineSimulatorPlugin",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Linux"
+			]
 		},
 		{
 			"Name": "ChaosVehicles",
-			"Type": "Runtime",
+			"Type": "Editor",
+			"LoadingPhase": "PreDefault"
+		},
+		{
+			"Name": "ChaosVehiclesEditor",
+			"Type": "UncookedOnly",
 			"LoadingPhase": "PreDefault"
 		}
 	]

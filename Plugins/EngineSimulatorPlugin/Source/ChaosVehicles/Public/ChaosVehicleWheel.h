@@ -131,10 +131,6 @@ class UChaosWheeledVehicleMovementComponent;
 		UPROPERTY(EditAnywhere, Category = Wheel)
 		bool bTractionControlEnabled;
 
-		/** The maximum amount of wheel spin */
-		UPROPERTY(EditAnywhere, Category = Wheel, meta = (ClampMin = "0.0", UIMin = "0.0"))
-		float MaxSpinRotation;
-
 		UPROPERTY(EditAnywhere, Category = Setup)
 		FRuntimeFloatCurve LateralSlipGraph;
 
@@ -337,7 +333,6 @@ class UChaosWheeledVehicleMovementComponent;
 			PWheelConfig.SideSlipModifier = this->SideSlipModifier;
 			PWheelConfig.SlipThreshold = this->SlipThreshold;
 			PWheelConfig.SkidThreshold = this->SkidThreshold;
-			PWheelConfig.MaxSpinRotation = this->MaxSpinRotation;
 
 			PWheelConfig.LateralSlipGraph.Empty();
 			float NumSamples = 20;

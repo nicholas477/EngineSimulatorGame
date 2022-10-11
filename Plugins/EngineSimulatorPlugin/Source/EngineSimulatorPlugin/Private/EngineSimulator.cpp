@@ -5,6 +5,7 @@
 #include "Sound/SoundWave.h"
 #include "Sound/SoundWaveProcedural.h"
 
+#if PLATFORM_WINDOWS
 __pragma(push_macro("PI"))
 __pragma(push_macro("TWO_PI"))
 
@@ -19,6 +20,7 @@ __pragma(push_macro("TWO_PI"))
 #include <mmiscapi.h>
 
 #pragma warning(disable : 4587)
+#endif
 
 #include "simulator.h"
 #include "compiler.h"
@@ -29,12 +31,15 @@ __pragma(push_macro("TWO_PI"))
 
 #include "audio_buffer.h"
 
+#if PLATFORM_WINDOWS
 #include "Windows/PostWindowsApi.h"
 #include "Windows/HideWindowsPlatformAtomics.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
 __pragma(pop_macro("PI"))
 __pragma(pop_macro("TWO_PI"))
+
+#endif
 
 typedef unsigned int SampleOffset;
 
