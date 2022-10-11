@@ -37,6 +37,15 @@ class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent 
 		float ClutchPressure = 1.f;
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
+		void SetStarterEnabled(bool bEnabled);
+
+	UPROPERTY(BlueprintReadOnly, Category = "Engine Simulator Vehicle Component")
+		bool bStarterEnabled = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Engine Simulator Vehicle Component")
+		bool bStarterAutomaticallyEnabled = true;
+
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|EngineSimulatorVehicleMovement")
 		void RespawnEngine();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Engine Simulator Vehicle Movement")
@@ -47,4 +56,8 @@ class ENGINESIMULATORPLUGIN_API UEngineSimulatorWheeledVehicleMovementComponent 
 
 public:
 	virtual TUniquePtr<Chaos::FSimpleWheeledVehicle> CreatePhysicsVehicle() override;
+
+#if WITH_GAMEPLAY_DEBUGGER
+	virtual void DescribeSelfToGameplayDebugger(class FGameplayDebuggerCategory* DebuggerCategory) const;
+#endif // WITH_GAMEPLAY_DEBUGGER
 };

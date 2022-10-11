@@ -48,6 +48,8 @@ struct FEngineSimulatorOutput
 	uint64 FrameCounter = 0;
 };
 
+class FGameplayDebuggerCategory;
+
 class FEngineSimulatorThread : public FRunnable
 {
 public:
@@ -67,6 +69,7 @@ public:
 	void Exit() override;
 
 	void Trigger();
+	void PrintGameplayDebuggerInfo(FGameplayDebuggerCategory* GameplayDebugger);
 
 protected:
 	TAtomic<bool> bStopRequested;
@@ -82,7 +85,7 @@ protected:
 	USoundWaveProcedural* SoundWaveOutput;
 
 	TQueue<TFunction<void(IEngineSimulatorInterface*)>, EQueueMode::Mpsc> UpdateQueue;
-	TFunction<void(UWorld* World)> DebugPrint;
+	TFunction<void(FGameplayDebuggerCategory*)> GameplayDebuggerPrint;
 
 	FRunnableThread* Thread;
 
@@ -103,12 +106,12 @@ public:
 
 	void AsyncUpdateSimulation(TFunction<void(IEngineSimulatorInterface*)> InCallable);
 
-	void PrintDebugInfo(UWorld* World);
-
 	FEngineSimulatorOutput GetLastOutput();
 
 	// Destroys the engine and the engine thread and remakes them
 	void Reset(class USoundWaveProcedural* OutputEngineSound);
+
+	void PrintGameplayDebuggerInfo(FGameplayDebuggerCategory* GameplayDebugger);
 
 protected:
 	TUniquePtr<FEngineSimulatorThread> EngineSimulatorThread;

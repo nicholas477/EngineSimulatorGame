@@ -8,6 +8,10 @@
 #include "Sound/SoundWaveProcedural.h"
 #include "ChaosVehicleManager.h"
 
+#if WITH_GAMEPLAY_DEBUGGER
+#include "GameplayDebuggerCategory.h"
+#endif // WITH_GAMEPLAY_DEBUGGER
+
 DECLARE_STATS_GROUP(TEXT("EngineSimulatorPlugin"), STATGROUP_EngineSimulatorPlugin, STATGROUP_Advanced);
 DECLARE_CYCLE_STAT(TEXT("EngineThread:UpdateSimulation"), STAT_EngineSimulatorPlugin_UpdateSimulation, STATGROUP_EngineSimulatorPlugin);
 
@@ -73,24 +77,42 @@ uint32 FEngineSimulatorThread::Run()
 
 				float TransmissionTorque = EngineSimulator->GetFilteredDynoTorque() * EngineSimulator->GetGearRatio();
 
-				DebugPrint = [bHasEngine = EngineSimulator->HasEngine(), T = TransmissionTorque, RPM = EngineSimulator->GetRPM(), Speed = EngineSimulator->GetSpeed(), DynoSpeed = DynoSpeed, Grounded = ThisInput.InContactWithGround](UWorld* World)
+#if WITH_GAMEPLAY_DEBUGGER
+				GameplayDebuggerPrint = [
+						bHasEngine = EngineSimulator->HasEngine(),
+						EngineName = EngineSimulator->GetName(),
+						T = TransmissionTorque,
+						RPM = EngineSimulator->GetRPM(),
+						Speed = EngineSimulator->GetSpeed(),
+						DynoSpeed = DynoSpeed,
+						Grounded = ThisInput.InContactWithGround
+					](FGameplayDebuggerCategory* GameplayDebugger)
 				{
 					if (bHasEngine)
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Tranmission torque: %f"), T));
-						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation RPM: %f"), RPM));
-						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Simulation Speed: %f"), Speed));
-						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Dyno Speed (RPM): %f"), DynoSpeed));
+						GameplayDebugger->AddTextLine(
+							FString::Printf(TEXT("{yellow}Engine: {white}%s"), *EngineName)
+						);
+						GameplayDebugger->AddTextLine(
+							FString::Printf(TEXT("\t{yellow}Torque at the wheel: {white}%f"), T)
+						);
+						GameplayDebugger->AddTextLine(
+							FString::Printf(TEXT("\t{yellow}RPM: {white}%f"), RPM)
+						);
+						GameplayDebugger->AddTextLine(
+							FString::Printf(TEXT("\t{yellow}Dyno RPM: {white}%f"), DynoSpeed)
+						);
 						if (!Grounded)
 						{
-							GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("Engine in air, dyno disabled")));
+							GameplayDebugger->AddTextLine("\t{green}Engine in air, dyno disabled");
 						}
 					}
 					else
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("FAILED TO LOAD ENGINE")));
+						GameplayDebugger->AddTextLine("{red}FAILED TO LOAD ENGINE");
 					}
 				};
+#endif
 
 				{
 					FScopeLock Lock(&OutputMutex);
@@ -237,14 +259,6 @@ void UEngineSimulatorWheeledVehicleSimulation::AsyncUpdateSimulation(TFunction<v
 	}
 }
 
-void UEngineSimulatorWheeledVehicleSimulation::PrintDebugInfo(UWorld* InWorld)
-{
-	if (EngineSimulatorThread && EngineSimulatorThread->DebugPrint)
-	{
-		EngineSimulatorThread->DebugPrint(InWorld);
-	}
-}
-
 FEngineSimulatorOutput UEngineSimulatorWheeledVehicleSimulation::GetLastOutput()
 {
 	FScopeLock Lock(&LastOutputMutex);
@@ -254,4 +268,12 @@ FEngineSimulatorOutput UEngineSimulatorWheeledVehicleSimulation::GetLastOutput()
 void UEngineSimulatorWheeledVehicleSimulation::Reset(USoundWaveProcedural* OutputEngineSound)
 {
 	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
+}
+
+void UEngineSimulatorWheeledVehicleSimulation::PrintGameplayDebuggerInfo(FGameplayDebuggerCategory* GameplayDebugger)
+{
+	if (EngineSimulatorThread && EngineSimulatorThread->GameplayDebuggerPrint)
+	{
+		EngineSimulatorThread->GameplayDebuggerPrint(GameplayDebugger);
+	}
 }

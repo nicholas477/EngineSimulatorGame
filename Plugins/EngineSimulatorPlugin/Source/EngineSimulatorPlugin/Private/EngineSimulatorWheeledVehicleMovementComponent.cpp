@@ -8,6 +8,10 @@
 #include "ChaosVehicleManager.h"
 #include "EngineSimulator.h"
 
+#if WITH_GAMEPLAY_DEBUGGER
+#include "GameplayDebuggerCategory.h"
+#endif
+
 UEngineSimulatorWheeledVehicleMovementComponent::UEngineSimulatorWheeledVehicleMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -27,7 +31,6 @@ void UEngineSimulatorWheeledVehicleMovementComponent::TickComponent(float DeltaT
 	if (VehicleSimulationPT.Get())
 	{
 		UEngineSimulatorWheeledVehicleSimulation* VS = ((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get());
-		VS->PrintDebugInfo(GetWorld());
 		LastEngineSimulatorOutput = VS->GetLastOutput();
 	}
 }
@@ -42,7 +45,6 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimChangeGearUp(b
 			((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
 			{
 				EngineInterface->SetGear(CurrentGear);
-				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("Shifting gear up to: %d"), CurrentGear + 1));
 			});
 		}
 	}
@@ -56,15 +58,6 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetEngineSimChangeGearDown
 		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
 		{
 			EngineInterface->SetGear(CurrentGear);
-
-			if (CurrentGear != -1)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("Downshifted to: %d"), CurrentGear + 1));
-			}
-			else
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("Shifting to neutral"));
-			}
 		});
 	}
 }
@@ -74,13 +67,13 @@ void UEngineSimulatorWheeledVehicleMovementComponent::RespawnEngine()
 	// Make the Vehicle Simulation class that will be updated from the physics thread async callback
 	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->Reset(OutputEngineSound);
 
-	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([](IEngineSimulatorInterface* EngineInterface)
+	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Enabling dyno, ignition, starter"));
 		EngineInterface->SetIgnitionEnabled(true);
-		EngineInterface->SetStarterEnabled(true);
+		EngineInterface->SetStarterEnabled(bStarterAutomaticallyEnabled);
 	});
 
+	bStarterEnabled = bStarterAutomaticallyEnabled;
 	CurrentGear = -1;
 }
 
@@ -97,17 +90,42 @@ void UEngineSimulatorWheeledVehicleMovementComponent::SetClutchPressure(float Pr
 	}
 }
 
+void UEngineSimulatorWheeledVehicleMovementComponent::SetStarterEnabled(bool bEnabled)
+{
+	bStarterEnabled = bEnabled;
+	if (VehicleSimulationPT)
+	{
+		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
+			{
+				EngineInterface->SetStarterEnabled(bStarterEnabled);
+			}
+		);
+	}
+}
+
 TUniquePtr<Chaos::FSimpleWheeledVehicle> UEngineSimulatorWheeledVehicleMovementComponent::CreatePhysicsVehicle() 
 {
 	// Make the Vehicle Simulation class that will be updated from the physics thread async callback
 	VehicleSimulationPT = MakeUnique<UEngineSimulatorWheeledVehicleSimulation>(Wheels, OutputEngineSound);
 
-	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([](IEngineSimulatorInterface* EngineInterface)
+	((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->AsyncUpdateSimulation([=](IEngineSimulatorInterface* EngineInterface)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Enabling dyno, ignition, starter"));
 		EngineInterface->SetIgnitionEnabled(true);
-		EngineInterface->SetStarterEnabled(true);
+		EngineInterface->SetStarterEnabled(bStarterAutomaticallyEnabled);
 	});
+
+	bStarterEnabled = bStarterAutomaticallyEnabled;
+	CurrentGear = -1;
 
 	return UChaosVehicleMovementComponent::CreatePhysicsVehicle();
 }
+
+#if WITH_GAMEPLAY_DEBUGGER
+void UEngineSimulatorWheeledVehicleMovementComponent::DescribeSelfToGameplayDebugger(FGameplayDebuggerCategory* DebuggerCategory) const
+{
+	if (VehicleSimulationPT)
+	{
+		((UEngineSimulatorWheeledVehicleSimulation*)VehicleSimulationPT.Get())->PrintGameplayDebuggerInfo(DebuggerCategory);
+	}
+}
+#endif
