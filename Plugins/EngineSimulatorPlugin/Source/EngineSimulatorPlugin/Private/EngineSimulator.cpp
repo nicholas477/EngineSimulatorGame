@@ -375,6 +375,8 @@ void FEngineSimulator::loadEngine(Engine* engine, Vehicle* vehicle, Transmission
     audioParams.dF_F_mix = static_cast<float>(engine->getInitialHighFrequencyGain());
     m_simulator.getSynthesizer()->setAudioParameters(audioParams);
 
+    m_simulator.m_dyno.m_maxTorque = m_transmission->getMaxClutchTorque();
+
     bool bLoadedEngineSound = false;
     for (int i = 0; i < engine->getExhaustSystemCount(); ++i) {
         ImpulseResponse* response = engine->getExhaustSystem(i)->getImpulseResponse();
