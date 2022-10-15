@@ -5,22 +5,7 @@
 #include "Sound/SoundWave.h"
 #include "Sound/SoundWaveProcedural.h"
 
-#if PLATFORM_WINDOWS
-__pragma(push_macro("PI"))
-__pragma(push_macro("TWO_PI"))
-
-#undef PI
-
-#undef TWO_PI
-
-#include "Windows/AllowWindowsPlatformTypes.h"
-#include "Windows/AllowWindowsPlatformAtomics.h"
-#include "Windows/PreWindowsApi.h"
-
-#include <mmiscapi.h>
-
-#pragma warning(disable : 4587)
-#endif
+#include "EngineSimulatorInternals/HeaderFixesStart.h"
 
 #include "simulator.h"
 #include "compiler.h"
@@ -31,15 +16,7 @@ __pragma(push_macro("TWO_PI"))
 
 #include "audio_buffer.h"
 
-#if PLATFORM_WINDOWS
-#include "Windows/PostWindowsApi.h"
-#include "Windows/HideWindowsPlatformAtomics.h"
-#include "Windows/HideWindowsPlatformTypes.h"
-
-__pragma(pop_macro("PI"))
-__pragma(pop_macro("TWO_PI"))
-
-#endif
+#include "EngineSimulatorInternals/HeaderFixesEnd.h"
 
 typedef unsigned int SampleOffset;
 
@@ -49,7 +26,7 @@ typedef unsigned int SampleOffset;
 class FEngineSimulator : public IEngineSimulatorInterface
 {
 public:
-    FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput);
+    FEngineSimulator(const FEngineSimulatorParameters& InParameters);
     virtual ~FEngineSimulator();
 
     // IEngineSimulatorInterface
@@ -201,7 +178,7 @@ protected:
 
     bool m_dynoEnabled;
     float m_dynoSpeed;
-    USoundWaveProcedural* SoundWaveOutput;
+    FEngineSimulatorParameters Parameters;
 
     AudioBuffer m_audioBuffer;
     uint32 PlayCursor;
@@ -210,7 +187,7 @@ protected:
     void FillAudio(USoundWaveProcedural* Wave, const int32 SamplesNeeded);
 };
 
-FEngineSimulator::FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput)
+FEngineSimulator::FEngineSimulator(const FEngineSimulatorParameters& InParameters)
 {
     m_vehicle = nullptr;
     m_transmission = nullptr;
@@ -219,7 +196,7 @@ FEngineSimulator::FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput)
     m_dynoEnabled = true;
     m_dynoSpeed = 0;
 
-    SoundWaveOutput = InSoundWaveOutput;
+    Parameters = InParameters;
 
     PlayCursor = 0;
 
@@ -228,35 +205,20 @@ FEngineSimulator::FEngineSimulator(USoundWaveProcedural* InSoundWaveOutput)
     m_audioBuffer.initialize(44100, 44100);
     m_audioBuffer.m_writePointer = (int)(44100 * 0.1);
 
-    //ysAudioParameters params;
-    //params.m_bitsPerSample = 16;
-    //params.m_channelCount = 1;
-    //params.m_sampleRate = 44100;
-    //m_outputAudioBuffer =
-    //    m_engine.GetAudioDevice()->CreateBuffer(&params, 44100);
-
-    //m_audioSource = m_engine.GetAudioDevice()->CreateSource(m_outputAudioBuffer);
-    //m_audioSource->SetMode((m_simulator.getEngine() != nullptr)
-    //    ? ysAudioSource::Mode::Loop
-    //    : ysAudioSource::Mode::Stop);
-    //m_audioSource->SetPan(0.0f);
-    //m_audioSource->SetVolume(1.0f);
-
-    check(SoundWaveOutput);
-    if (SoundWaveOutput)
+    check(Parameters.SoundWaveOutput);
+    if (Parameters.SoundWaveOutput)
     {
-        SoundWaveOutput->OnSoundWaveProceduralUnderflow.BindRaw(this, &FEngineSimulator::FillAudio);
+        Parameters.SoundWaveOutput->OnSoundWaveProceduralUnderflow.BindRaw(this, &FEngineSimulator::FillAudio);
     }
 }
 
 FEngineSimulator::~FEngineSimulator()
 {
-    if (SoundWaveOutput)
+    if (Parameters.SoundWaveOutput)
     {
-        SoundWaveOutput->OnSoundWaveProceduralUnderflow.Unbind();
+        Parameters.SoundWaveOutput->OnSoundWaveProceduralUnderflow.Unbind();
     }
     m_simulator.endAudioRenderingThread();
-    //SoundWaveOutput->
 }
 
 void FEngineSimulator::loadScript()
@@ -560,7 +522,7 @@ void FEngineSimulator::FillAudio(USoundWaveProcedural* Wave, const int32 Samples
 }
 
 
-TUniquePtr<IEngineSimulatorInterface> CreateEngine(USoundWaveProcedural* SoundWaveOutput)
+TUniquePtr<IEngineSimulatorInterface> CreateEngine(const FEngineSimulatorParameters& Parameters)
 {
-    return MakeUnique<FEngineSimulator>(SoundWaveOutput);
+    return MakeUnique<FEngineSimulator>(Parameters);
 }

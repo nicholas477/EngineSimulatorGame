@@ -35,4 +35,10 @@ public:
 	virtual ~IEngineSimulatorInterface() {};
 };
 
-TUniquePtr<IEngineSimulatorInterface> CreateEngine(class USoundWaveProcedural* SoundWaveOutput);
+struct FEngineSimulatorParameters
+{
+	bool bShowGUI = false;
+	class USoundWaveProcedural* SoundWaveOutput = nullptr;
+};
+
+TUniquePtr<IEngineSimulatorInterface> CreateEngine(const FEngineSimulatorParameters& Parameters);

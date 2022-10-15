@@ -15,10 +15,10 @@
 DECLARE_STATS_GROUP(TEXT("EngineSimulatorPlugin"), STATGROUP_EngineSimulatorPlugin, STATGROUP_Advanced);
 DECLARE_CYCLE_STAT(TEXT("EngineThread:UpdateSimulation"), STAT_EngineSimulatorPlugin_UpdateSimulation, STATGROUP_EngineSimulatorPlugin);
 
-FEngineSimulatorThread::FEngineSimulatorThread(USoundWaveProcedural* InSoundWaveOutput)
+FEngineSimulatorThread::FEngineSimulatorThread(const FEngineSimulatorParameters& InParameters)
 	: bStopRequested(false)
 	, Semaphore(FGenericPlatformProcess::GetSynchEventFromPool(false))
-	, SoundWaveOutput(InSoundWaveOutput)
+	, Parameters(InParameters)
 	, Thread(FRunnableThread::Create(this, TEXT("Engine Simulator Thread"))) // TODO: change this later
 {
 	
@@ -44,7 +44,7 @@ bool FEngineSimulatorThread::Init()
 
 uint32 FEngineSimulatorThread::Run()
 {
-	EngineSimulator = CreateEngine(SoundWaveOutput);
+	EngineSimulator = CreateEngine(Parameters);
 
 	while (!bStopRequested)
 	{
@@ -151,10 +151,11 @@ void FEngineSimulatorThread::Trigger()
 }
 
 UEngineSimulatorWheeledVehicleSimulation::UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, 
-	class USoundWaveProcedural* OutputEngineSound)
+	const FEngineSimulatorParameters& InParameters)
 	: UChaosWheeledVehicleSimulation(WheelsIn)
+	, Parameters(InParameters)
 {
-	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
+	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(InParameters);
 }
 
 void UEngineSimulatorWheeledVehicleSimulation::ProcessMechanicalSimulation(float DeltaTime)
@@ -265,9 +266,9 @@ FEngineSimulatorOutput UEngineSimulatorWheeledVehicleSimulation::GetLastOutput()
 	return LastOutput;
 }
 
-void UEngineSimulatorWheeledVehicleSimulation::Reset(USoundWaveProcedural* OutputEngineSound)
+void UEngineSimulatorWheeledVehicleSimulation::Reset(const FEngineSimulatorParameters& InParameters)
 {
-	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(OutputEngineSound);
+	EngineSimulatorThread = MakeUnique<FEngineSimulatorThread>(InParameters);
 }
 
 #if WITH_GAMEPLAY_DEBUGGER

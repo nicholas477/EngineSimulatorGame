@@ -14,7 +14,7 @@ public class EngineSim : ModuleRules
     {
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            return "C:/local/engine-sim";
+            return Path.Combine(ModulePath, "engine-sim");
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
@@ -220,6 +220,12 @@ public class EngineSim : ModuleRules
         }
 
         PublicDefinitions.Add("ATG_ENGINE_SIM_PIRANHA_ENABLED=1");
+
+        if (Target.Platform == UnrealTargetPlatform.Linux)
+        {
+            PublicDefinitions.Add("USE_CXX17_FILESYSTEM=1");
+        }
+        bEnableExceptions = true;
 
         PublicIncludePaths.Add(Path.Combine(GetEngineSimPath(Target), "include"));
         PublicIncludePaths.Add(Path.Combine(GetEngineSimPath(Target), "scripting/include"));

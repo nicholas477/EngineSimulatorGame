@@ -6,6 +6,7 @@
 #include "UObject/NoExportTypes.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
 #include "HAL/Runnable.h"
+#include "EngineSimulator.h"
 #include "EngineSimulatorWheeledVehicleSimulation.generated.h"
 
 class IEngineSimulatorInterface;
@@ -55,7 +56,7 @@ class FEngineSimulatorThread : public FRunnable
 public:
 
 	// Constructor, create the thread by calling this
-	FEngineSimulatorThread(USoundWaveProcedural* InSoundWaveOutput);
+	FEngineSimulatorThread(const FEngineSimulatorParameters& InParameters);
 
 	// Destructor
 	virtual ~FEngineSimulatorThread() override;
@@ -82,7 +83,7 @@ protected:
 
 	FEvent* Semaphore;
 	TUniquePtr<IEngineSimulatorInterface> EngineSimulator;
-	USoundWaveProcedural* SoundWaveOutput;
+	FEngineSimulatorParameters Parameters;
 
 	TQueue<TFunction<void(IEngineSimulatorInterface*)>, EQueueMode::Mpsc> UpdateQueue;
 
@@ -97,7 +98,7 @@ protected:
 class UEngineSimulatorWheeledVehicleSimulation : public UChaosWheeledVehicleSimulation
 {
 public:
-	UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, class USoundWaveProcedural* OutputEngineSound);
+	UEngineSimulatorWheeledVehicleSimulation(TArray<class UChaosVehicleWheel*>& WheelsIn, const FEngineSimulatorParameters& InParameters);
 	virtual ~UEngineSimulatorWheeledVehicleSimulation() = default;
 
 	/** Update the engine/transmission simulation */
@@ -111,7 +112,7 @@ public:
 	FEngineSimulatorOutput GetLastOutput();
 
 	// Destroys the engine and the engine thread and remakes them
-	void Reset(class USoundWaveProcedural* OutputEngineSound);
+	void Reset(const FEngineSimulatorParameters& InParameters);
 
 #if WITH_GAMEPLAY_DEBUGGER
 	void PrintGameplayDebuggerInfo(FGameplayDebuggerCategory* GameplayDebugger);
@@ -119,6 +120,8 @@ public:
 
 protected:
 	TUniquePtr<FEngineSimulatorThread> EngineSimulatorThread;
+
+	FEngineSimulatorParameters Parameters;
 
 	FEngineSimulatorOutput LastOutput;
 	mutable FCriticalSection LastOutputMutex;
